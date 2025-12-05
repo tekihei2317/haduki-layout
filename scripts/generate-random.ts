@@ -238,7 +238,7 @@ function main() {
   console.log("Ordered:");
   printLayout(layout);
 
-  // console.log(layoutToRomanTableString(layout));
+  console.log(layoutToRomanTableString(layout));
 }
 
 main();

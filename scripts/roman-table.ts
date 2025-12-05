@@ -41,6 +41,7 @@ const positionToUsKeyboardKeyMap = {
 } satisfies { [key in KeyPosition]: string };
 
 const dakuonPair = {
+  う: "ゔ",
   か: "が",
   き: "ぎ",
   く: "ぐ",
@@ -93,7 +94,7 @@ type RomanTable = RomanTableEntry[];
 /**
  * レイアウトをローマ字テーブル形式に変換する
  */
-function exportRomanTable(layout: Layout): RomanTable {
+export function exportRomanTable(layout: Layout): RomanTable {
   const table: RomanTable = [];
 
   // 単打
