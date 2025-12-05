@@ -75,7 +75,7 @@ export type KanaInfo = NormalKana | ShiftKeyKana;
 export const Kanas = {
   あ: { type: "normal", kana: "あ", isDakuon: false, isYouon: false, isGairaion: true },
   い: { type: "normal", kana: "い", isDakuon: false, isYouon: false, isGairaion: true },
-  う: { type: "normal", kana: "う", isDakuon: false, isYouon: false, isGairaion: true },
+  う: { type: "normal", kana: "う", isDakuon: true, isYouon: false, isGairaion: true },
   え: { type: "normal", kana: "え", isDakuon: false, isYouon: false, isGairaion: true },
   お: { type: "normal", kana: "お", isDakuon: false, isYouon: false, isGairaion: true },
   か: { type: "normal", kana: "か", isDakuon: true, isYouon: false, isGairaion: false },

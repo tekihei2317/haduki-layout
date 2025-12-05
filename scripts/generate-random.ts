@@ -1,4 +1,4 @@
-import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions, Layout, OrderedInfos } from "./core";
+import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions, Layout, OrderedInfos, KanaInfo } from "./core";
 import { layoutToRomanTableString } from "./roman-table";
 import { objectEntries, objectFromEntries, objectKeys } from "./utils";
 
@@ -119,6 +119,7 @@ function generateRandomLayout(): UnorderedLayout {
 
   // STEP2. シフトキー以外の位置に濁音になるかなを配置する
   const dakuonKanas = Object.values(Kanas).filter((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana[];
+  console.log(dakuonKanas.length);
   const availablePositionsForDakuon = objectKeys(layout).filter((position) => !shiftKeyPositions.includes(position));
   const dakuonPositions = getRandomSample(availablePositionsForDakuon, dakuonKanas.length);
   dakuonKanas.forEach((kana, index) => {
@@ -171,55 +172,60 @@ function generateRandomLayout(): UnorderedLayout {
 }
 
 /**
- * ランダムに生成した配列を元に、各キーの役割を決める
+ * あるキーに配置されたかなを適当に配置する
+ */
+function orderKey(kanas: KanaInfo[]): OrderedInfos {
+  if (kanas.length === 0) {
+    throw new Error("キーにかなが割り当てられていません");
+  }
+  const dakuonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana;
+  if (kanas.length === 1) {
+    const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
+    return { oneStroke: kanas[0].kana, dakuonKanaInfo: dakuonKana, youonKanaInfo: youonKana };
+  } else {
+    // 拗音になるかなが含まれている場合、強制的に通常シフトに割り当てる
+    const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
+    if (youonKana) {
+      const otherKana = kanas.find((kana) => kana.kana !== youonKana.kana);
+      if (!otherKana) {
+        throw new Error("otherKana is undefined");
+      }
+      return {
+        oneStroke: otherKana.kana,
+        normalShift: youonKana.kana,
+        dakuonKanaInfo: dakuonKana,
+        youonKanaInfo: youonKana,
+      };
+    } else {
+      // 拗音になるかなが含まれていない場合、句読点を通常シフトに割り当ててから、残りのカナをランダムに割り当てる
+      const kutoutenKana = kanas.find((kana) => kana.kana === "。" || kana.kana === "、");
+      const otherKanas = kanas.filter((kana) => kana.kana !== kutoutenKana?.kana);
+      if (otherKanas.length > 3) {
+        throw new Error("1つの位置に句読点を除き3つ以上のかなが割り当てられています");
+      }
+
+      const shuffledOtherKanas = getRandomSample(otherKanas, otherKanas.length);
+      const orderedInfos: OrderedInfos = {
+        oneStroke: shuffledOtherKanas[0].kana,
+        shift1: shuffledOtherKanas[1]?.kana,
+        shift2: shuffledOtherKanas[2]?.kana,
+        normalShift: kutoutenKana?.kana,
+        dakuonKanaInfo: dakuonKana,
+      };
+
+      return orderedInfos;
+    }
+  }
+}
+
+/**
+ * ランダムに生成した配列を元に、各キーの単打/シフトにかなを配置する
  */
 function orderLayout(unorderedLayout: UnorderedLayout): Layout {
-  const mapped: [KeyPosition, OrderedInfos][] = objectEntries(unorderedLayout).map(([position, kanas]) => {
-    if (kanas.length === 0) {
-      throw new Error("キーにかなが割り当てられていません");
-    }
-    const dakuonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana;
-    if (kanas.length === 1) {
-      const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
-      return [position, { oneStroke: kanas[0].kana, dakuonKanaInfo: dakuonKana, youonKanaInfo: youonKana }];
-    } else {
-      // 拗音になるかなが含まれている場合、強制的に通常シフトに割り当てる
-      const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
-      if (youonKana) {
-        const otherKana = kanas.find((kana) => kana.kana !== youonKana.kana);
-        if (!otherKana) {
-          throw new Error("otherKana is undefined");
-        }
-        return [
-          position,
-          {
-            oneStroke: otherKana.kana,
-            normalShift: youonKana.kana,
-            dakuonKanaInfo: dakuonKana,
-            youonKanaInfo: youonKana,
-          },
-        ];
-      } else {
-        // 拗音になるかなが含まれていない場合、句読点を通常シフトに割り当ててから、残りのカナをランダムに割り当てる
-        const kutoutenKana = kanas.find((kana) => kana.kana === "。" || kana.kana === "、");
-        const otherKanas = kanas.filter((kana) => kana.kana !== kutoutenKana?.kana);
-        if (otherKanas.length > 3) {
-          throw new Error("1つの位置に句読点を除き3つ以上のかなが割り当てられています");
-        }
-
-        const shuffledOtherKanas = getRandomSample(otherKanas, otherKanas.length);
-        const orderedInfos: OrderedInfos = {
-          oneStroke: shuffledOtherKanas[0].kana,
-          shift1: shuffledOtherKanas[1]?.kana,
-          shift2: shuffledOtherKanas[2]?.kana,
-          normalShift: kutoutenKana?.kana,
-          dakuonKanaInfo: dakuonKana,
-        };
-
-        return [position, orderedInfos];
-      }
-    }
-  });
+  const mapped: [KeyPosition, OrderedInfos][] = objectEntries(unorderedLayout).map(([position, kanas]) => [
+    position,
+    orderKey(kanas),
+  ]);
   const layout = objectFromEntries(mapped);
   return layout;
 }
