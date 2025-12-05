@@ -89,7 +89,7 @@ export const Kanas = {
   せ: { type: "normal", kana: "せ", isDakuon: true, isYouon: false, isGairaion: false },
   そ: { type: "normal", kana: "そ", isDakuon: true, isYouon: false, isGairaion: false },
   た: { type: "normal", kana: "た", isDakuon: true, isYouon: false, isGairaion: false },
-  ち: { type: "normal", kana: "ち", isDakuon: true, isYouon: true, isGairaion: false },
+  ち: { type: "normal", kana: "ち", isDakuon: true, isYouon: true, isGairaion: true },
   つ: { type: "normal", kana: "つ", isDakuon: true, isYouon: false, isGairaion: true },
   て: { type: "normal", kana: "て", isDakuon: true, isYouon: false, isGairaion: true },
   と: { type: "normal", kana: "と", isDakuon: true, isYouon: false, isGairaion: true },

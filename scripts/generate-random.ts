@@ -119,7 +119,6 @@ function generateRandomLayout(): UnorderedLayout {
 
   // STEP2. シフトキー以外の位置に濁音になるかなを配置する
   const dakuonKanas = Object.values(Kanas).filter((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana[];
-  console.log(dakuonKanas.length);
   const availablePositionsForDakuon = objectKeys(layout).filter((position) => !shiftKeyPositions.includes(position));
   const dakuonPositions = getRandomSample(availablePositionsForDakuon, dakuonKanas.length);
   dakuonKanas.forEach((kana, index) => {
@@ -146,7 +145,7 @@ function generateRandomLayout(): UnorderedLayout {
   // STEP4. 残りのかなを配置する
   const remainingKanas = Object.values(Kanas).filter((kana) => {
     if (kana.type === "shiftKey") return false;
-    return !kana.isDakuon && !kana.isYouon && !kana.isGairaion;
+    return !kana.isDakuon && !kana.isYouon && !kana.isGairaion && kana.kana !== "、" && kana.kana !== "。";
   });
   // シフトキー以外の位置に配置する。ただし、拗音になるかなの位置には1つまで配置できる。
   const availablePositionsForRemaining = objectKeys(layout)
