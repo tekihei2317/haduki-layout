@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Kanas, Layout } from "./core";
+import { Layout } from "./core";
 import { exportRomanTable, layoutToRomanTableString } from "./roman-table";
 
 const exampleLayout: Layout = {
@@ -20,7 +20,7 @@ const exampleLayout: Layout = {
   14: { oneStroke: "ん", shift1: "へ", shift2: "わ" },
   15: { oneStroke: "く", shift1: "れ", shift2: "え", normalShift: "ぇ" },
   16: { oneStroke: "い", shift1: "め", shift2: "ね", normalShift: "ぃ" },
-  17: { oneStroke: "ょ" },
+  17: { oneStroke: "ょ", normalShift: "。" },
   18: { oneStroke: "゛" },
   19: { oneStroke: "お", shift1: "そ", shift2: "ぬ", normalShift: "ぉ" },
   20: { oneStroke: "を", shift1: "せ" },
@@ -35,29 +35,10 @@ const exampleLayout: Layout = {
   29: { oneStroke: "ー", shift2: "ほ" },
 };
 
-const enrichLayoutWithMetadata = (layout: Layout): Layout => {
-  const cloned = structuredClone(layout);
-  Object.values(cloned).forEach((info) => {
-    const kana = info.oneStroke;
-    const kanaInfo = Kanas[kana as keyof typeof Kanas];
-    if (kanaInfo.type === "normal") {
-      if (kanaInfo.isDakuon) {
-        info.dakuonKanaInfo = kanaInfo;
-      }
-      if (kanaInfo.isYouon) {
-        info.youonKanaInfo = kanaInfo;
-      }
-    }
-  });
-  return cloned;
-};
-
-const exampleLayoutWithMetadata = enrichLayoutWithMetadata(exampleLayout);
-
 describe("romanTable", () => {
   describe("単打", () => {
     test("単打のマッピングが作成されること", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+      const table = exportRomanTable(exampleLayout);
 
       const expectedSingles = [
         { input: "q", nextInput: "ま" },
@@ -98,62 +79,105 @@ describe("romanTable", () => {
 
   describe("濁点後置シフト", () => {
     test("か -> が", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "かl", output: "が" }]));
     });
 
     test("き -> ぎ", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "きl", output: "ぎ" }]));
     });
 
     test("ま行の濁点シフトはぱ行になること ま -> ぱ", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "まl", output: "ぱ" }]));
     });
 
-    test.skip("シフト面のかなはシフトを省略できること ん/へ -> べ", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
-      console.log(layoutToRomanTableString(exampleLayoutWithMetadata));
+    test("シフト面のかなはシフトを省略できること ん/へ -> べ", () => {
+      const table = exportRomanTable(exampleLayout);
+      console.log(layoutToRomanTableString(exampleLayout));
       expect(table).toEqual(expect.arrayContaining([{ input: "んl", output: "べ" }]));
+    });
+
+    test("大文字でもシフトができること", () => {
+      const table = exportRomanTable(exampleLayout);
+      expect(table).toEqual(
+        expect.arrayContaining([
+          { input: "かL", output: "が" },
+          { input: "きL", output: "ぎ" },
+          { input: "まL", output: "ぱ" },
+          { input: "んL", output: "べ" },
+        ])
+      );
     });
   });
 
   describe("ゃシフト", () => {
     test("き -> きゃ", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "きs", output: "きゃ" }]));
     });
 
-    test.skip("シフトを省略できること る -> ちゃ", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+    test("シフトを省略できること る -> ちゃ", () => {
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "るs", output: "ちゃ" }]));
     });
 
-    test.skip("拗音でない場合は濁点になること か -> が", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+    test("拗音でない場合は濁点になること か -> が", () => {
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "かs", output: "が" }]));
+    });
+
+    test("大文字でもシフトができること", () => {
+      const table = exportRomanTable(exampleLayout);
+      expect(table).toEqual(
+        expect.arrayContaining([
+          { input: "きS", output: "きゃ" },
+          { input: "るS", output: "ちゃ" },
+          { input: "かS", output: "が" },
+        ])
+      );
     });
   });
 
   describe("ゅシフト", () => {
-    test("も -> shift1", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+    test("も -> や", () => {
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "もd", output: "や" }]));
     });
   });
 
   describe("ょシフト", () => {
-    test("も -> shift2", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
+    test("も -> あ", () => {
+      const table = exportRomanTable(exampleLayout);
       expect(table).toEqual(expect.arrayContaining([{ input: "もk", output: "あ" }]));
     });
   });
 
-  describe.skip("通常シフト", () => {
-    test("通常シフトが作成されること", () => {
-      const table = exportRomanTable(exampleLayoutWithMetadata);
-      expect(table).toEqual(expect.arrayContaining([expect.objectContaining({ output: "ぁ" })]));
+  describe("通常シフト", () => {
+    test("通常シフトで小書きが入力できること", () => {
+      const table = exportRomanTable(exampleLayout);
+      expect(table).toEqual(expect.arrayContaining([{ input: "A", output: "ぁ" }]));
+    });
+
+    test("通常シフトで拗音になるマイナーかなを入力できること", () => {
+      const table = exportRomanTable(exampleLayout);
+      expect(table).toEqual(
+        expect.arrayContaining([
+          { input: "X", nextInput: "み" },
+          { input: "V", nextInput: "ち" },
+        ])
+      );
+    });
+
+    test("シフトが定義されていない場合は、単打のかなが入力できること", () => {
+      const table = exportRomanTable(exampleLayout);
+      expect(table).toEqual(
+        expect.arrayContaining([
+          { input: "Q", nextInput: "ま" },
+          { input: "W", nextInput: "す" },
+        ])
+      );
     });
   });
 });

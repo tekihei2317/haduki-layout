@@ -177,10 +177,8 @@ function orderKey(kanas: KanaInfo[]): OrderedInfos {
   if (kanas.length === 0) {
     throw new Error("キーにかなが割り当てられていません");
   }
-  const dakuonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana;
   if (kanas.length === 1) {
-    const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
-    return { oneStroke: kanas[0].kana, dakuonKanaInfo: dakuonKana, youonKanaInfo: youonKana };
+    return { oneStroke: kanas[0].kana };
   } else {
     // 拗音になるかなが含まれている場合、強制的に通常シフトに割り当てる
     const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
@@ -192,8 +190,6 @@ function orderKey(kanas: KanaInfo[]): OrderedInfos {
       return {
         oneStroke: otherKana.kana,
         normalShift: youonKana.kana,
-        dakuonKanaInfo: dakuonKana,
-        youonKanaInfo: youonKana,
       };
     } else {
       // 拗音になるかなが含まれていない場合、句読点を通常シフトに割り当ててから、残りのカナをランダムに割り当てる
@@ -209,7 +205,6 @@ function orderKey(kanas: KanaInfo[]): OrderedInfos {
         shift1: shuffledOtherKanas[1]?.kana,
         shift2: shuffledOtherKanas[2]?.kana,
         normalShift: kutoutenKana?.kana,
-        dakuonKanaInfo: dakuonKana,
       };
 
       return orderedInfos;
