@@ -1,5 +1,6 @@
-import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions } from "./types";
-import { objectKeys } from "./utils";
+import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions, Layout, OrderedInfos, KanaInfo } from "./core";
+import { layoutToRomanTableString } from "./roman-table";
+import { objectEntries, objectFromEntries, objectKeys } from "./utils";
 
 const emptyLayout: UnorderedLayout = {
   0: [],
@@ -49,7 +50,7 @@ function getRandomSample<T>(array: T[], sampleSize: number): T[] {
 /**
  * 配列を表示する
  */
-function printLayout(layout: UnorderedLayout) {
+function printUnordered(layout: UnorderedLayout) {
   for (let i = 0; i < 4; i++) {
     let line = "";
     for (const j of keyPositions) {
@@ -59,6 +60,29 @@ function printLayout(layout: UnorderedLayout) {
         line += "　";
       }
       if (j % 10 === 9) {
+        console.log(line);
+        line = "";
+      }
+    }
+    console.log();
+  }
+}
+
+/**
+ * 配列を表示する
+ */
+function printLayout(layout: Layout) {
+  const props = ["oneStroke", "shift1", "shift2", "normalShift"] as const;
+  for (const prop of props) {
+    let line = "";
+    console.log(prop);
+    for (const i of keyPositions) {
+      if (layout[i][prop]) {
+        line += layout[i][prop];
+      } else {
+        line += "　";
+      }
+      if (i % 10 === 9) {
         console.log(line);
         line = "";
       }
@@ -121,7 +145,7 @@ function generateRandomLayout(): UnorderedLayout {
   // STEP4. 残りのかなを配置する
   const remainingKanas = Object.values(Kanas).filter((kana) => {
     if (kana.type === "shiftKey") return false;
-    return !kana.isDakuon && !kana.isYouon && !kana.isGairaion;
+    return !kana.isDakuon && !kana.isYouon && !kana.isGairaion && kana.kana !== "、" && kana.kana !== "。";
   });
   // シフトキー以外の位置に配置する。ただし、拗音になるかなの位置には1つまで配置できる。
   const availablePositionsForRemaining = objectKeys(layout)
@@ -132,7 +156,9 @@ function generateRandomLayout(): UnorderedLayout {
       // 拗音になるかなの位置には最大で1つしかおけない
       if (kanas.some((kana) => kana.type === "normal" && kana.isYouon)) return [position];
       // それ以外の場所は、空きスペースの分だけ配置できる
-      const positions: KeyPosition[] = new Array(4 - kanas.length).fill(position);
+      // TODO
+      // const positions: KeyPosition[] = new Array(4 - kanas.length).fill(position);
+      const positions: KeyPosition[] = new Array(3 - kanas.length).fill(position);
       return positions;
     })
     .flat();
@@ -144,9 +170,70 @@ function generateRandomLayout(): UnorderedLayout {
   return layout;
 }
 
+/**
+ * あるキーに配置されたかなを適当に配置する
+ */
+function orderKey(kanas: KanaInfo[]): OrderedInfos {
+  if (kanas.length === 0) {
+    throw new Error("キーにかなが割り当てられていません");
+  }
+  if (kanas.length === 1) {
+    return { oneStroke: kanas[0].kana };
+  } else {
+    // 拗音になるかなが含まれている場合、強制的に通常シフトに割り当てる
+    const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
+    if (youonKana) {
+      const otherKana = kanas.find((kana) => kana.kana !== youonKana.kana);
+      if (!otherKana) {
+        throw new Error("otherKana is undefined");
+      }
+      return {
+        oneStroke: otherKana.kana,
+        normalShift: youonKana.kana,
+      };
+    } else {
+      // 拗音になるかなが含まれていない場合、句読点を通常シフトに割り当ててから、残りのカナをランダムに割り当てる
+      const kutoutenKana = kanas.find((kana) => kana.kana === "。" || kana.kana === "、");
+      const otherKanas = kanas.filter((kana) => kana.kana !== kutoutenKana?.kana);
+      if (otherKanas.length > 3) {
+        throw new Error("1つの位置に句読点を除き3つ以上のかなが割り当てられています");
+      }
+
+      const shuffledOtherKanas = getRandomSample(otherKanas, otherKanas.length);
+      const orderedInfos: OrderedInfos = {
+        oneStroke: shuffledOtherKanas[0].kana,
+        shift1: shuffledOtherKanas[1]?.kana,
+        shift2: shuffledOtherKanas[2]?.kana,
+        normalShift: kutoutenKana?.kana,
+      };
+
+      return orderedInfos;
+    }
+  }
+}
+
+/**
+ * ランダムに生成した配列を元に、各キーの単打/シフトにかなを配置する
+ */
+function orderLayout(unorderedLayout: UnorderedLayout): Layout {
+  const mapped: [KeyPosition, OrderedInfos][] = objectEntries(unorderedLayout).map(([position, kanas]) => [
+    position,
+    orderKey(kanas),
+  ]);
+  const layout = objectFromEntries(mapped);
+  return layout;
+}
+
 function main() {
-  const layout = generateRandomLayout();
+  const unorderedLayout = generateRandomLayout();
+  console.log("Unordered:");
+  printUnordered(unorderedLayout);
+
+  const layout = orderLayout(unorderedLayout);
+  console.log("Ordered:");
   printLayout(layout);
+
+  console.log(layoutToRomanTableString(layout));
 }
 
 main();
