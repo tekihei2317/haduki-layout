@@ -1,15 +1,4 @@
-import {
-  Kanas,
-  KeyPosition,
-  UnorderedLayout,
-  NormalKana,
-  keyPositions,
-  Layout,
-  OrderedInfos,
-  KanaInfo,
-  validateLayout,
-} from "./core";
-import { layoutToRomanTableString } from "./roman-table";
+import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions, Layout, OrderedInfos, KanaInfo } from "./core";
 import { objectEntries, objectFromEntries, objectKeys } from "./utils";
 
 const emptyLayout: UnorderedLayout = {
@@ -60,7 +49,7 @@ function getRandomSample<T>(array: T[], sampleSize: number): T[] {
 /**
  * 配列を表示する
  */
-function printUnordered(layout: UnorderedLayout) {
+export function printUnordered(layout: UnorderedLayout) {
   for (let i = 0; i < 4; i++) {
     let line = "";
     for (const j of keyPositions) {
@@ -81,11 +70,10 @@ function printUnordered(layout: UnorderedLayout) {
 /**
  * 配列を表示する
  */
-function printLayout(layout: Layout) {
+export function printLayout(layout: Layout) {
   const props = ["oneStroke", "shift1", "shift2", "normalShift"] as const;
   for (const prop of props) {
     let line = "";
-    console.log(prop);
     for (const i of keyPositions) {
       if (layout[i][prop]) {
         line += layout[i][prop];
@@ -117,7 +105,7 @@ function printLayout(layout: Layout) {
  * STEP5. 各位置に配置したかなから、どのキーを単打、通常シフト、ゅ後置シフト、ょ後置シフトにするかを決める
  *  拗音になるかなに他のキーがあれば、拗音になるかなは強制的に通常シフト位置に配置される。
  */
-function generateRandomLayout(): UnorderedLayout {
+export function generateRandomLayout(): UnorderedLayout {
   const layout: UnorderedLayout = { ...emptyLayout };
 
   // STEP1. シフトキーを配置する
@@ -225,7 +213,7 @@ function orderKey(kanas: KanaInfo[]): OrderedInfos {
 /**
  * ランダムに生成した配列を元に、各キーの単打/シフトにかなを配置する
  */
-function orderLayout(unorderedLayout: UnorderedLayout): Layout {
+export function orderLayout(unorderedLayout: UnorderedLayout): Layout {
   const mapped: [KeyPosition, OrderedInfos][] = objectEntries(unorderedLayout).map(([position, kanas]) => [
     position,
     orderKey(kanas),
@@ -233,17 +221,3 @@ function orderLayout(unorderedLayout: UnorderedLayout): Layout {
   const layout = objectFromEntries(mapped);
   return layout;
 }
-
-function main() {
-  const unorderedLayout = generateRandomLayout();
-  console.log("Unordered:");
-  printUnordered(unorderedLayout);
-
-  const layout = orderLayout(unorderedLayout);
-  console.log("Ordered:");
-  printLayout(layout);
-
-  console.log(layoutToRomanTableString(layout));
-}
-
-main();
