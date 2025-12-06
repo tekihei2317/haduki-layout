@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { exampleLayout } from "./layout-fixtures";
 import { keystrokeCountForKana, strokesForKana, KanaCount } from "./stroke";
+import { generateRandomLayout, orderLayout, printLayout } from "./generate-random";
+import { layoutToRomanTableString } from "./roman-table";
 
 function runKeystrokes(datasetPath: string) {
   const lines = readFileSync(datasetPath, "utf-8").trim().split("\n");
@@ -43,6 +45,13 @@ function runKeystrokes(datasetPath: string) {
   );
 }
 
+function runGenerateRandom() {
+  const unorderedLayout = generateRandomLayout();
+  const layout = orderLayout(unorderedLayout);
+  printLayout(layout);
+  console.log(layoutToRomanTableString(layout));
+}
+
 function main() {
   const [, , command, ...args] = process.argv;
   switch (command) {
@@ -50,6 +59,10 @@ function main() {
       const datasetArg = args.find((arg) => arg.startsWith("--dataset="));
       const datasetPath = datasetArg ? datasetArg.split("=")[1] : "dataset/kouy-1-million.tsv";
       runKeystrokes(datasetPath);
+      break;
+    }
+    case "generate": {
+      runGenerateRandom();
       break;
     }
     default:
