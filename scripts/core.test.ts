@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { Kanas } from "./core";
 
 describe("かな", () => {
-  test("濁音になるかなが26個あること", () => {
+  test("濁音になるかなが21個あること", () => {
     const dakuonKanas = Object.values(Kanas).filter((kanaInfo) => kanaInfo.type === "normal" && kanaInfo.isDakuon);
 
-    expect(dakuonKanas).toHaveLength(26);
+    expect(dakuonKanas).toHaveLength(21);
   });
 
   test("拗音になるかなは「き、し、ち、に、ひ、み、り」であること", () => {

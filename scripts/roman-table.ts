@@ -69,6 +69,14 @@ const dakuonPair = {
   も: "ぽ",
 };
 
+const handakuonPair = {
+  は: "ぱ",
+  ひ: "ぴ",
+  ふ: "ぷ",
+  へ: "ぺ",
+  ほ: "ぽ",
+};
+
 /**
  * かなを濁音化する
  */
@@ -77,6 +85,16 @@ function addDakuten(kana: string): string {
     throw new Error(`${kana}は濁音化できません`);
   }
   return dakuonPair[kana as keyof typeof dakuonPair];
+}
+
+/**
+ * かなを半濁音化する
+ */
+function addHandakuten(kana: string): string {
+  if (!(kana in handakuonPair)) {
+    throw new Error(`${kana}は半濁音化できません`);
+  }
+  return handakuonPair[kana as keyof typeof handakuonPair];
 }
 
 /**
@@ -157,6 +175,14 @@ export function exportRomanTable(layout: Layout): RomanTable {
   ];
   const findDakuonKana = (info: (typeof layout)[KeyPosition]) => kanaSlots(info).find(isDakuonCandidate);
   const findYouonKana = (info: (typeof layout)[KeyPosition]) => kanaSlots(info).find(isYouonCandidate);
+  const findHagyouKanaExceptHi = (info: (typeof layout)[KeyPosition]) =>
+    kanaSlots(info).find((kana) => kana && ["は", "ふ", "へ", "ほ"].includes(kana));
+  const findGairaionKana = (info: (typeof layout)[KeyPosition]) => {
+    return kanaSlots(info).find((kana) => {
+      const kanaInfo = getKanaInfo(kana);
+      return kanaInfo?.type === "normal" && kanaInfo.isGairaion;
+    });
+  };
 
   // 単打
   for (const [position, info] of objectEntries(layout)) {
@@ -198,7 +224,7 @@ export function exportRomanTable(layout: Layout): RomanTable {
     }
   }
 
-  // ゅ後置シフト（shift1がある場合、または拗音になるかなが単打でない場合）
+  // ゅ後置シフト（shift1がある場合、拗音になるかなが単打で打てない場合、は+ゅ=ぴを打つ場合）
   const lyu = objectEntries(layout).find(([_, info]) => info.oneStroke === "ゅ");
   if (!lyu) throw new Error("ゅが見つかりません");
   const lyuKey = positionToUsKeyboardKey(lyu[0]);
@@ -206,21 +232,32 @@ export function exportRomanTable(layout: Layout): RomanTable {
     const youonKana = findYouonKana(info);
     if (info.shift1) {
       table.push({ input: `${info.oneStroke}${lyuKey}`, output: info.shift1 });
+      table.push({ input: `${info.oneStroke}${withShift(lyuKey)}`, output: info.shift1 });
     } else if (youonKana && youonKana != info.oneStroke) {
       table.push({ input: `${info.oneStroke}${lyuKey}`, output: `${youonKana}ゅ` });
+      table.push({ input: `${info.oneStroke}${withShift(lyuKey)}`, output: `${youonKana}ゅ` });
+    } else if (info.oneStroke === "は") {
+      table.push({ input: `${info.oneStroke}${lyuKey}`, output: "ぴ" });
+      table.push({ input: `${info.oneStroke}${withShift(lyuKey)}`, output: "ぴ" });
     }
   }
 
-  // ょ後置シフト（shift2がある場合、または拗音になるかなが単打でない場合）
+  // ょ後置シフト（shift2がある場合、拗音になるかなが単打で打てない場合、ひ以外のは行の半濁音を打つ場合）
   const lyo = objectEntries(layout).find(([_, info]) => info.oneStroke === "ょ");
   if (!lyo) throw new Error("ょが見つかりません");
   const lyoKey = positionToUsKeyboardKey(lyo[0]);
   for (const [, info] of objectEntries(layout)) {
     const youonKana = findYouonKana(info);
+    const hagyouKana = findHagyouKanaExceptHi(info);
     if (info.shift2) {
       table.push({ input: `${info.oneStroke}${lyoKey}`, output: info.shift2 });
+      table.push({ input: `${info.oneStroke}${withShift(lyoKey)}`, output: info.shift2 });
     } else if (youonKana && youonKana != info.oneStroke) {
       table.push({ input: `${info.oneStroke}${lyoKey}`, output: `${youonKana}ょ` });
+      table.push({ input: `${info.oneStroke}${withShift(lyoKey)}`, output: `${youonKana}ょ` });
+    } else if (hagyouKana) {
+      table.push({ input: `${info.oneStroke}${lyoKey}`, output: addHandakuten(hagyouKana) });
+      table.push({ input: `${info.oneStroke}${withShift(lyoKey)}`, output: addHandakuten(hagyouKana) });
     }
   }
 
@@ -237,10 +274,15 @@ export function exportRomanTable(layout: Layout): RomanTable {
         table.push({ input: `${withShift(key)}`, nextInput: info.normalShift });
       }
     } else {
-      // シフトが定義されていない場合は単打のかなを出力する。シフトキーの場合は確定する。
+      // シフトキーの場合は確定する
+      // シフトが定義されていない場合は、外来音で使うかながあれば外来音を出力する
+      // そうでなければ単打のかなを出力する
+      const gairaionKana = findGairaionKana(info);
       const shiftKeys = ["ゃ", "ゅ", "ょ", "゛"];
       if (shiftKeys.includes(info.oneStroke)) {
         table.push({ input: `${withShift(key)}`, output: info.oneStroke });
+      } else if (gairaionKana) {
+        table.push({ input: `${withShift(key)}`, nextInput: gairaionKana });
       } else {
         table.push({ input: `${withShift(key)}`, nextInput: info.oneStroke });
       }
