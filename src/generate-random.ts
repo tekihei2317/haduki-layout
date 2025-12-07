@@ -1,4 +1,15 @@
-import { Kanas, KeyPosition, UnorderedLayout, NormalKana, keyPositions, Layout, OrderedInfos, KanaInfo } from "./core";
+import {
+  Kanas,
+  KeyPosition,
+  UnorderedLayout,
+  NormalKana,
+  keyPositions,
+  Layout,
+  OrderedInfos,
+  KanaInfo,
+  Kana,
+  validateLayout,
+} from "./core";
 import { objectEntries, objectFromEntries, objectKeys } from "./utils";
 
 const emptyLayout: UnorderedLayout = {
@@ -33,6 +44,27 @@ const emptyLayout: UnorderedLayout = {
   28: [],
   29: [],
 };
+
+const shiftKeyKanas = [Kanas.ゃ, Kanas.ゅ, Kanas.ょ, Kanas.゛];
+
+function createEmptyLayout(): Layout {
+  const entries = keyPositions.map(
+    (pos) =>
+      [
+        pos,
+        { oneStroke: undefined as unknown as Kana, shift1: undefined, shift2: undefined, normalShift: undefined },
+      ] as [KeyPosition, OrderedInfos]
+  );
+  return objectFromEntries(entries);
+}
+
+function placeShiftKeys(layout: Layout): KeyPosition[] {
+  const positions = getRandomSample([...keyPositions], shiftKeyKanas.length) as KeyPosition[];
+  shiftKeyKanas.forEach((kana, idx) => {
+    layout[positions[idx]].oneStroke = kana.kana;
+  });
+  return positions;
+}
 
 /**
  * 配列からランダムにサンプルを取得する
@@ -90,134 +122,19 @@ export function printLayout(layout: Layout) {
 }
 
 /**
- * 条件を満たすキー配列をランダムに生成する
+ * 条件を満たすキー配列を生成する
  *
- * 以下の手順で配列を生成する。
- * STEP1. シフトキーを配置する
- *  ゃゅょ゛の4つのシフトキーを配置する
- * STEP2. 濁音になる26かなを配置する
- *  濁音になる26のかなの位置を、シフトキーの4キーを除いた26箇所から決めて配置する。濁音にならない拗音の"にり"の扱いはややこしいので後で決める。
- *  ↑32キーにするのが丸いか。
- * STEP3. あいうえおと句読点を配置する
- *  シフトキーと拗音になるかな、外来音になるかな（ふてうとしつ）以外の場所から、あいうえおと句読点の位置を決めて配置する。
- * STEP4. 残りの濁音、拗音、外来音のいずれにもならないものを、シフトキーを除いた場所に配置する
- *  拗音になるかなのところに置いても良いが、1つまで。
- * STEP5. 各位置に配置したかなから、どのキーを単打、通常シフト、ゅ後置シフト、ょ後置シフトにするかを決める
- *  拗音になるかなに他のキーがあれば、拗音になるかなは強制的に通常シフト位置に配置される。
+ * TOP26を単打に配置し、打鍵効率を下げる（1打で打てるかなを増やす）
  */
-export function generateRandomLayout(): UnorderedLayout {
-  const layout: UnorderedLayout = { ...emptyLayout };
-
-  // STEP1. シフトキーを配置する
-  const shiftKeys = [Kanas.ゃ, Kanas.ゅ, Kanas.ょ, Kanas.゛];
-  const shiftKeyPositions = getRandomSample(objectKeys(layout), 4);
-  shiftKeys.forEach((shiftKey, index) => {
-    layout[shiftKeyPositions[index]].push(shiftKeys[index]);
-  });
-
-  // STEP2. シフトキー以外の位置に濁音になるかなを配置する
-  const dakuonKanas = Object.values(Kanas).filter((kana) => kana.type === "normal" && kana.isDakuon) as NormalKana[];
-  const availablePositionsForDakuon = objectKeys(layout).filter((position) => !shiftKeyPositions.includes(position));
-  const dakuonPositions = getRandomSample(availablePositionsForDakuon, dakuonKanas.length);
-  dakuonKanas.forEach((kana, index) => {
-    layout[dakuonPositions[index]].push(kana);
-  });
-
-  // STEP3. あいうえおと句読点を配置する
-  const aiueoKanas = [Kanas.あ, Kanas.い, Kanas.う, Kanas.え, Kanas.お, Kanas["。"], Kanas["、"]];
-  const availablePositionsForAiueo = objectKeys(layout).filter((position) => {
-    // シフトキーが含まれず、拗音、外来音が含まれていない位置はOK
-    const isAvailable = layout[position as KeyPosition].every((kana) => {
-      if (kana.type === "shiftKey") return false;
-      if (kana.isYouon) return false;
-      if (kana.isGairaion) return false;
-      return true;
-    });
-    return isAvailable;
-  });
-  const aiueoPositions = getRandomSample(availablePositionsForAiueo, aiueoKanas.length);
-  aiueoKanas.forEach((kana, index) => {
-    layout[aiueoPositions[index]].push(kana);
-  });
-
-  // STEP4. 残りのかなを配置する
-  const remainingKanas = Object.values(Kanas).filter((kana) => {
-    if (kana.type === "shiftKey") return false;
-    return !kana.isDakuon && !kana.isYouon && !kana.isGairaion && kana.kana !== "、" && kana.kana !== "。";
-  });
-  // シフトキー以外の位置に配置する。ただし、拗音になるかなの位置には1つまで配置できる。
-  const availablePositionsForRemaining = objectKeys(layout)
-    .map((position) => {
-      const kanas = layout[position];
-      // シフトキーの位置配置できない
-      if (kanas.some((kana) => kana.type === "shiftKey")) return [];
-      // 拗音になるかなの位置には最大で1つしかおけない
-      if (kanas.some((kana) => kana.type === "normal" && kana.isYouon)) return [position];
-      // それ以外の場所は、空きスペースの分だけ配置できる
-      // TODO
-      // const positions: KeyPosition[] = new Array(4 - kanas.length).fill(position);
-      const positions: KeyPosition[] = new Array(3 - kanas.length).fill(position);
-      return positions;
-    })
-    .flat();
-  const remainingPositions = getRandomSample(availablePositionsForRemaining, remainingKanas.length);
-  remainingKanas.forEach((kana, index) => {
-    layout[remainingPositions[index]].push(kana);
-  });
-
-  return layout;
-}
-
-/**
- * あるキーに配置されたかなを適当に配置する
- */
-function orderKey(kanas: KanaInfo[]): OrderedInfos {
-  if (kanas.length === 0) {
-    throw new Error("キーにかなが割り当てられていません");
+export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
+  if (top26s.length > keyPositions.length - shiftKeyKanas.length) {
+    throw new Error("top26s is too long");
   }
-  if (kanas.length === 1) {
-    return { oneStroke: kanas[0].kana };
-  } else {
-    // 拗音になるかなが含まれている場合、強制的に通常シフトに割り当てる
-    const youonKana: NormalKana = kanas.find((kana) => kana.type === "normal" && kana.isYouon) as NormalKana;
-    if (youonKana) {
-      const otherKana = kanas.find((kana) => kana.kana !== youonKana.kana);
-      if (!otherKana) {
-        throw new Error("otherKana is undefined");
-      }
-      return {
-        oneStroke: otherKana.kana,
-        normalShift: youonKana.kana,
-      };
-    } else {
-      // 拗音になるかなが含まれていない場合、句読点を通常シフトに割り当ててから、残りのカナをランダムに割り当てる
-      const kutoutenKana = kanas.find((kana) => kana.kana === "。" || kana.kana === "、");
-      const otherKanas = kanas.filter((kana) => kana.kana !== kutoutenKana?.kana);
-      if (otherKanas.length > 3) {
-        throw new Error("1つの位置に句読点を除き3つ以上のかなが割り当てられています");
-      }
 
-      const shuffledOtherKanas = getRandomSample(otherKanas, otherKanas.length);
-      const orderedInfos: OrderedInfos = {
-        oneStroke: shuffledOtherKanas[0].kana,
-        shift1: shuffledOtherKanas[1]?.kana,
-        shift2: shuffledOtherKanas[2]?.kana,
-        normalShift: kutoutenKana?.kana,
-      };
+  const layout = createEmptyLayout();
+  // STEP1. 後置シフトキーゃゅょ゛を配置する
+  placeShiftKeys(layout);
 
-      return orderedInfos;
-    }
-  }
-}
-
-/**
- * ランダムに生成した配列を元に、各キーの単打/シフトにかなを配置する
- */
-export function orderLayout(unorderedLayout: UnorderedLayout): Layout {
-  const mapped: [KeyPosition, OrderedInfos][] = objectEntries(unorderedLayout).map(([position, kanas]) => [
-    position,
-    orderKey(kanas),
-  ]);
-  const layout = objectFromEntries(mapped);
+  // STEP2以降はこれから実装する
   return layout;
 }

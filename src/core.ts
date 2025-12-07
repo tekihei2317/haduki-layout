@@ -61,7 +61,7 @@ const kanas = [
   "ゎ",
 ] as const;
 
-type Kana = (typeof kanas)[number];
+export type Kana = (typeof kanas)[number];
 
 type ShiftKeyKana = {
   type: "shiftKey";
