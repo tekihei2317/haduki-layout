@@ -195,6 +195,11 @@ export function validateLayout(layout: Layout): ValidatedLayout {
     const info = Kanas[kana as keyof typeof Kanas];
     return info?.type === "normal" && info.isDakuon;
   };
+  const isGairaionKana = (kana: string | undefined) => {
+    if (!kana) return false;
+    const info = Kanas[kana as keyof typeof Kanas];
+    return info?.type === "normal" && info.isGairaion;
+  };
 
   for (const [, info] of Object.entries(layout)) {
     // シフトキーに関するルール:
@@ -254,6 +259,18 @@ export function validateLayout(layout: Layout): ValidatedLayout {
       }
       if (info.shift2) {
         throw new Error(`'${hahifuKana}'の ょ後置シフトにはかなを配置できません`);
+      }
+    }
+
+    // 外来音に関するルール
+    const gairaionKanas = [info.oneStroke, info.shift1, info.shift2, info.normalShift].filter(isGairaionKana);
+    if (gairaionKanas.length > 1) {
+      // 外来音になるかながが排他的に配置されていること
+      throw new Error("外来音になるかなは1キーに1つまでです");
+    } else if (gairaionKanas.length === 1) {
+      // 外来音になるかなの通常シフトには何も配置されていないこと（外来音になるかなが通常シフトにある場合を除く）
+      if (info.normalShift && !isGairaionKana(info.normalShift)) {
+        throw new Error(`外来音になるかなの通常シフトにはかなを配置できません ${JSON.stringify(info)}`);
       }
     }
   }

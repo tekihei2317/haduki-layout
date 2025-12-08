@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { Layout } from "./core";
 import { strokesForKana, Keystroke, keystrokeCountForKana, totalKeystrokesForDataset } from "./stroke";
 import { exampleLayout } from "./layout-fixtures";
 

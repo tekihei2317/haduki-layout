@@ -51,6 +51,7 @@ export function printLayout(layout: Layout) {
 type PlaceInfo = {
   type: "shiftKey" | "kanaKey" | undefined;
   youonPlaced: boolean;
+  dakuonPlaced: boolean;
   gairaionPlaced: boolean;
 };
 
@@ -66,10 +67,14 @@ export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
 
   const layout = createEmptyLayout();
   const placeInfo: Record<KeyPosition, PlaceInfo> = objectFromEntries(
-    keyPositions.map((pos) => [pos, { type: undefined, youonPlaced: false, gairaionPlaced: false }])
+    keyPositions.map((pos) => [
+      pos,
+      { type: undefined, youonPlaced: false, dakuonPlaced: false, gairaionPlaced: false },
+    ])
   );
   const updatePlaceInfo = (pos: KeyPosition, info: NormalKana) => {
     if (info.isYouon) placeInfo[pos].youonPlaced = true;
+    if (info.isDakuon) placeInfo[pos].dakuonPlaced = true;
     if (info.isGairaion) placeInfo[pos].gairaionPlaced = true;
   };
 
@@ -92,13 +97,25 @@ export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
 
     if (top26s.includes(kana)) {
       // top26は単打に配置する
-      const positions = keyPositions.filter((pos) => placeInfo[pos].type !== "shiftKey" && !layout[pos].oneStroke);
+      const positions = keyPositions.filter(
+        (pos) =>
+          !layout[pos].oneStroke &&
+          placeInfo[pos].type !== "shiftKey" &&
+          !placeInfo[pos].youonPlaced &&
+          !placeInfo[pos].dakuonPlaced
+      );
       const pos = positions[getRandomInt(positions.length)];
       layout[pos].oneStroke = kana;
       updatePlaceInfo(pos, info);
     } else if (info.isYouon) {
       // 拗音は単打でなければ、通常シフトに配置する
-      const positions = keyPositions.filter((pos) => placeInfo[pos].type !== "shiftKey" && !layout[pos].normalShift);
+      const positions = keyPositions.filter(
+        (pos) =>
+          !layout[pos].normalShift &&
+          placeInfo[pos].type !== "shiftKey" &&
+          !placeInfo[pos].youonPlaced &&
+          !placeInfo[pos].dakuonPlaced
+      );
       const pos = positions[getRandomInt(positions.length)];
       layout[pos].normalShift = kana;
       updatePlaceInfo(pos, info);
@@ -107,14 +124,26 @@ export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
       throw new Error("'は'はtop26に含めて単打に配置してください");
     } else if (["ふ", "へ", "ほ"].includes(kana)) {
       // ふへほは、単打でなければゅ後置シフトに配置する
-      const positions = keyPositions.filter((pos) => placeInfo[pos].type !== "shiftKey" && !layout[pos].shift1);
+      const positions = keyPositions.filter(
+        (pos) =>
+          !layout[pos].shift1 &&
+          placeInfo[pos].type !== "shiftKey" &&
+          !placeInfo[pos].youonPlaced &&
+          !placeInfo[pos].dakuonPlaced
+      );
       const pos = positions[getRandomInt(positions.length)];
       layout[pos].shift1 = kana;
       updatePlaceInfo(pos, info);
     } else {
       // そうでない場合は、ゅ後置シフトまたはょ後置シフトに配置する
       const slot: "shift1" | "shift2" = Math.random() < 0.5 ? "shift1" : "shift2";
-      const positions = keyPositions.filter((pos) => placeInfo[pos].type !== "shiftKey" && !layout[pos][slot]);
+      const positions = keyPositions.filter(
+        (pos) =>
+          !layout[pos][slot] &&
+          placeInfo[pos].type !== "shiftKey" &&
+          !placeInfo[pos].youonPlaced &&
+          !placeInfo[pos].dakuonPlaced
+      );
       const pos = positions[getRandomInt(positions.length)];
       layout[pos][slot] = kana;
       updatePlaceInfo(pos, info);
@@ -134,9 +163,22 @@ export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
       updatePlaceInfo(pos, Kanas[kana]);
     } else {
       // シフト1または2の空いているところで、拗音と外来音に関するカナが配置されていない場所に配置する
+      // は の後置シフトにはおけないことに注意する
+      // ふへほ のょ後置シフトにはおけないことに注意する
+      const huheho: Kana[] = ["ふ", "へ", "ほ"] as const;
       const slot: "shift1" | "shift2" = Math.random() < 0.5 ? "shift1" : "shift2";
       const positions = keyPositions.filter(
-        (pos) => !layout[pos][slot] && !placeInfo[pos].youonPlaced && placeInfo[pos].gairaionPlaced
+        (pos) =>
+          !layout[pos][slot] &&
+          placeInfo[pos].type !== "shiftKey" &&
+          !placeInfo[pos].youonPlaced &&
+          !placeInfo[pos].gairaionPlaced &&
+          layout[pos].oneStroke !== "は" &&
+          (slot === "shift1"
+            ? true
+            : huheho.includes(layout[pos].oneStroke) || huheho.includes(layout[pos].shift1!)
+            ? false
+            : true)
       );
       const pos = positions[getRandomInt(positions.length)];
       layout[pos][slot] = kana;
@@ -175,11 +217,16 @@ export function generateLayout(top26s: (keyof typeof Kanas)[]): Layout {
       const positions =
         slot === "shift1"
           ? keyPositions.filter(
-              (pos) => !layout[pos][slot] && !placeInfo[pos].youonPlaced && layout[pos].oneStroke !== "は"
+              (pos) =>
+                !layout[pos][slot] &&
+                placeInfo[pos].type !== "shiftKey" &&
+                !placeInfo[pos].youonPlaced &&
+                layout[pos].oneStroke !== "は"
             )
           : keyPositions.filter(
               (pos) =>
                 !layout[pos][slot] &&
+                placeInfo[pos].type !== "shiftKey" &&
                 !placeInfo[pos].youonPlaced &&
                 layout[pos].oneStroke !== "は" &&
                 !huheho.includes(layout[pos].oneStroke) &&
