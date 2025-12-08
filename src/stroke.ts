@@ -153,6 +153,14 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
     }
   }
 
+  // 小書き
+  const kogakiBase = kogakiInverse[kana];
+  if (kogakiBase) {
+    const baseInfo = findSlot(layout, kogakiBase);
+    if (!baseInfo) throw new Error(`${kogakiBase} がレイアウトに見つかりません`);
+    return [keystroke(baseInfo.position, true)];
+  }
+
   // 濁音・半濁音
   const base = dakutenInverse[kana];
   if (base) {
