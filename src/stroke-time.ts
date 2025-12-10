@@ -1,4 +1,4 @@
-import { Keystroke } from "./stroke";
+import { Keystroke, keyForPosition } from "./stroke";
 
 /**
  * 打鍵する指
@@ -241,4 +241,59 @@ export function getStrokeTime(strokes: Keystroke[]): number {
 
     return total + time;
   }, 0);
+}
+
+type TrigramStrokeTime = Array<Array<Array<number>>>;
+const SIZE = 30;
+
+const keyToPositionMap: Record<string, number> = (() => {
+  const map: Record<string, number> = {};
+  for (let i = 0; i < SIZE; i++) {
+    const key = keyForPosition(i.toString());
+    map[key] = i;
+  }
+  return map;
+})();
+
+const toIndex = (key: string): number => {
+  const index = keyToPositionMap[key];
+  if (index === undefined) throw new Error(`未知のキーです: ${key}`);
+  return index;
+};
+
+/**
+ * 3-gramを打つときの、3番目のキーの打鍵時間
+ */
+const trigramStrokeTime: TrigramStrokeTime = Array.from({ length: SIZE }, () =>
+  Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, () => -1))
+);
+
+// 3-gramの打鍵時間を前計算する
+for (let i = 0; i < SIZE; i++) {
+  for (let j = 0; j < SIZE; j++) {
+    for (let k = 0; k < SIZE; k++) {
+      const trigram = keyForPosition(i.toString()) + keyForPosition(j.toString()) + keyForPosition(k.toString());
+      const strokes = trigram.split("").map((key) => ({ key, shiftKey: false }));
+      const firstTwo = strokes.slice(0, 2);
+
+      // 3キー全体の時間 - 最初の2キーの時間 = 3打鍵目に追加でかかる時間
+      const strokeTime = getStrokeTime(strokes) - getStrokeTime(firstTwo);
+      trigramStrokeTime[i][j][k] = strokeTime;
+    }
+  }
+}
+
+/**
+ * 3-gramの打鍵時間を使って、打鍵時間を計算する
+ */
+export function getStrokeTypeByTrigram(strokes: Keystroke[]): number {
+  let strokeTime = getStrokeTime(strokes.slice(0, 2));
+  for (let i = 0; i < strokes.length - 2; i++) {
+    const a = toIndex(strokes[i].key);
+    const b = toIndex(strokes[i + 1].key);
+    const c = toIndex(strokes[i + 2].key);
+    strokeTime += trigramStrokeTime[a][b][c];
+  }
+
+  return strokeTime;
 }

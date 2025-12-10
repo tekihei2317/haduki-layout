@@ -106,7 +106,7 @@ const kogakiInverse: Record<string, string> = {
   ぉ: "お",
 };
 
-const keyForPosition = (position: string) => {
+export const keyForPosition = (position: string) => {
   const key = positionToUsKeyboardKeyMap[position];
   if (!key) throw new Error(`unknown key position: ${position}`);
   return key;

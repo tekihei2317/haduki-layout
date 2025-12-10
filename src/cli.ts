@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { exampleLayout, top26Kanas } from "./layout-fixtures";
 import { keystrokeCountForKana, strokesForKana, KanaCount, textToStrokes, keystrokesToString } from "./stroke";
 import { generateLayout, printLayout } from "./generate-random";
-import { getStrokeTime } from "./stroke-time";
+import { getStrokeTime, getStrokeTypeByTrigram } from "./stroke-time";
 import { layoutToRomanTableString } from "./roman-table";
 
 function runKeystrokes(datasetPath: string) {
@@ -59,6 +59,7 @@ async function runStrokeTime() {
   const normalizedText = text.replace(/\s+/g, "");
   const strokes = textToStrokes(exampleLayout, normalizedText);
   const totalMs = getStrokeTime(strokes);
+  const totalMsByTrigram = getStrokeTypeByTrigram(strokes);
   const strokeString = keystrokesToString(strokes);
   const kanaCount = normalizedText.length;
   const efficiency = kanaCount === 0 ? 0 : strokes.length / kanaCount;
@@ -68,6 +69,7 @@ async function runStrokeTime() {
     JSON.stringify(
       {
         totalMs,
+        totalMsByTrigram,
         strokes: strokes.length,
         kanaCount,
         efficiency,
