@@ -8,13 +8,13 @@ type Finger = 1 | 2 | 3 | 4 | 7 | 8 | 9 | 0;
 /**
  * 打鍵する手
  */
-type Hand = "Left" | "Right";
+type Hand = "left" | "right";
 
 function fingerToHand(finger: Finger): Hand {
   if ([1, 2, 3, 4].includes(finger)) {
-    return "Left";
+    return "left";
   } else {
-    return "Right";
+    return "right";
   }
 }
 
@@ -53,6 +53,96 @@ const fingeringMap: Record<string, Finger> = {
   ".": 9,
   "/": 0,
 };
+
+const getFinger = (key: string): Finger => {
+  const finger = fingeringMap[key];
+  if (finger === undefined) throw new Error(`未対応のキーです: ${key}`);
+  return finger;
+};
+
+/** 座標 */
+type Coord = { x: number; y: number };
+
+/**
+ * キーの座標
+ *
+ * 座標系はQキーの左上を原点とし、左向きにx軸、下向きにy軸を取った。
+ * キー1個の大きさが1で、キーボードはロースタッガードを仮定。
+ */
+const keyPosition: Record<string, Coord> = {
+  q: { x: 0.5, y: 0.5 },
+  w: { x: 1.5, y: 0.5 },
+  e: { x: 2.5, y: 0.5 },
+  r: { x: 3.5, y: 0.5 },
+  t: { x: 4.5, y: 0.5 },
+  y: { x: 5.5, y: 0.5 },
+  u: { x: 6.5, y: 0.5 },
+  i: { x: 7.5, y: 0.5 },
+  o: { x: 8.5, y: 0.5 },
+  p: { x: 9.5, y: 0.5 },
+  a: { x: 0.75, y: 1.5 },
+  s: { x: 1.75, y: 1.5 },
+  d: { x: 2.75, y: 1.5 },
+  f: { x: 3.75, y: 1.5 },
+  g: { x: 4.75, y: 1.5 },
+  h: { x: 5.75, y: 1.5 },
+  j: { x: 6.75, y: 1.5 },
+  k: { x: 7.75, y: 1.5 },
+  l: { x: 8.75, y: 1.5 },
+  ";": { x: 9.75, y: 1.5 },
+  z: { x: 1.25, y: 2.5 },
+  x: { x: 2.25, y: 2.5 },
+  c: { x: 3.25, y: 2.5 },
+  v: { x: 4.25, y: 2.5 },
+  b: { x: 5.25, y: 2.5 },
+  n: { x: 6.25, y: 2.5 },
+  m: { x: 7.25, y: 2.5 },
+  ",": { x: 8.25, y: 2.5 },
+  ".": { x: 9.25, y: 2.5 },
+  "/": { x: 10.25, y: 2.5 },
+};
+
+/**
+ * ホームポジションでの指の座標
+ *
+ * 少しハの字に構えていると仮定し、小指と人差し指を同じy座標にしている。
+ * 薬指はそれより0.5キーぶん上、中指は0.75キーぶん上。
+ */
+const fingerPosition: Record<Finger, Coord> = {
+  1: { x: 0.75, y: 1.75 },
+  2: { x: 1.75, y: 1.25 },
+  3: { x: 2.75, y: 1 },
+  4: { x: 3.75, y: 1.75 },
+  7: { x: 6.75, y: 1.75 },
+  8: { x: 7.75, y: 1 },
+  9: { x: 8.75, y: 1.25 },
+  0: { x: 9.75, y: 1.75 },
+};
+
+/**
+ * 片手であるキーからあるキーへ移動する時の手の移動距離
+ *
+ * 指はホームポジションから相対位置を保って固定したまま、手を移動させるとして計算する
+ */
+export function getHandMoveDistance(fromKey: string, toKey: string): number {
+  const fromPos = keyPosition[fromKey];
+  const toPos = keyPosition[toKey];
+  if (!fromPos || !toPos) throw new Error(`未対応のキーです: ${fromKey}, ${toKey}`);
+
+  const fromFinger = getFinger(fromKey);
+  const toFinger = getFinger(toKey);
+
+  const fromHand = fingerToHand(fromFinger);
+  const toHand = fingerToHand(toFinger);
+  if (fromHand !== toHand) throw new Error(`異なる手の移動は計算できません: ${fromKey} -> ${toKey}`);
+
+  const fromFingerPos = fingerPosition[fromFinger];
+  const toFingerPos = fingerPosition[toFinger];
+
+  const dx = toPos.x - fromPos.x + fromFingerPos.x - toFingerPos.x;
+  const dy = toPos.y - fromPos.y + fromFingerPos.y - toFingerPos.y;
+  return Math.hypot(dx, dy);
+}
 
 /**
  * 打鍵モデルのパラメーター
@@ -97,13 +187,7 @@ export const parameters: Parameters = {
  * ストロークに対する打鍵時間（ms）を計算する
  */
 export function getStrokeTime(strokes: Keystroke[]): number {
-  const getFinger = (key: string): Finger => {
-    const finger = fingeringMap[key];
-    if (finger === undefined) throw new Error(`未対応のキーです: ${key}`);
-    return finger;
-  };
-
-  let lastHand: Hand | null = null;
+  let prevHand: Hand | undefined = undefined;
   /** ある指を最後に使ったときを記録する */
   let lastFinger: Record<Finger, { index: number } | undefined> = {
     1: undefined,
@@ -116,6 +200,12 @@ export function getStrokeTime(strokes: Keystroke[]): number {
     0: undefined,
   };
 
+  /** ある手を最後に使ったときを記録する */
+  let lastHand: Record<Hand, { index: number; key: string } | undefined> = {
+    left: undefined,
+    right: undefined,
+  };
+
   return strokes.reduce((total, stroke, index) => {
     const finger = getFinger(stroke.key);
     const hand = fingerToHand(finger);
@@ -124,10 +214,20 @@ export function getStrokeTime(strokes: Keystroke[]): number {
     let time = parameters.push[finger];
 
     // 手の交代
-    if (lastHand !== null && lastHand !== hand) {
+    if (prevHand !== undefined && prevHand !== hand) {
       time += parameters.alt;
     }
-    lastHand = hand;
+    prevHand = hand;
+
+    // 手の移動
+    if (lastHand[hand] !== undefined) {
+      const diff = index - lastHand[hand].index;
+      if (diff <= 2) {
+        const k = diff === 1 ? 1 : 0.3;
+        time += k * parameters.move * getHandMoveDistance(lastHand[hand].key, stroke.key);
+      }
+    }
+    lastHand[hand] = { index, key: stroke.key };
 
     // 同指連続のペナルティ
     if (lastFinger[finger] !== undefined) {

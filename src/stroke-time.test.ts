@@ -1,9 +1,32 @@
 import { describe, expect, test } from "bun:test";
 import { Keystroke } from "./stroke";
-import { getStrokeTime, parameters } from "./stroke-time";
+import { getHandMoveDistance, getStrokeTime, parameters } from "./stroke-time";
+
+describe("getHandMoveDistance", () => {
+  test("qキーからqキー", () => {
+    // 移動なし
+    expect(getHandMoveDistance("q", "q")).toBe(0);
+  });
+  test("qキーからwキー", () => {
+    // 左手薬指を下に0.5キー分動かす
+    expect(getHandMoveDistance("q", "w")).toBe(0.5);
+  });
+  test("qキーからeキー", () => {
+    // 左手中指を下に0.75キー分動かす
+    expect(getHandMoveDistance("q", "e")).toBe(0.75);
+  });
+  test("qキーからrキー", () => {
+    // 移動なし
+    expect(getHandMoveDistance("q", "r")).toBe(0);
+  });
+  test("qキーからtキー", () => {
+    // 左手人差し指を右に1キー分動かす
+    expect(getHandMoveDistance("q", "t")).toBe(1);
+  });
+});
 
 describe("getStrokeTime", () => {
-  describe("push", () => {
+  describe("打鍵時間 push", () => {
     test("左手小指の打鍵時間がpush[1]になること", () => {
       expect(getStrokeTime([{ key: "a", shiftKey: false }])).toBe(parameters.push[1]);
     });
@@ -39,7 +62,7 @@ describe("getStrokeTime", () => {
     });
   });
 
-  describe("手の交代", () => {
+  describe("手の交代 alt", () => {
     test("左手から右手に交代するとaltが加算されること", () => {
       const strokes: Keystroke[] = [
         { key: "a", shiftKey: false },
@@ -57,7 +80,7 @@ describe("getStrokeTime", () => {
     });
   });
 
-  describe("同指連続のペナルティ", () => {
+  describe("同指連続のペナルティ pena", () => {
     test("同じ指を連続で使うとpenaが加算されること 左手人差し指", () => {
       const strokes: Keystroke[] = [
         { key: "f", shiftKey: false },
@@ -84,6 +107,30 @@ describe("getStrokeTime", () => {
         parameters.push[4] +
         (parameters.push[7] + parameters.alt) +
         (parameters.push[4] + parameters.alt + parameters.pena[4] * 0.3);
+      expect(getStrokeTime(strokes)).toBe(expectedTime);
+    });
+  });
+
+  describe("手の移動 move", () => {
+    test("直前に同じ手でキーを押していた場合、move * 距離 が加算されること", () => {
+      const strokes: Keystroke[] = [
+        { key: "a", shiftKey: false },
+        { key: "g", shiftKey: false },
+      ];
+      const expectedTime = parameters.push[1] + parameters.move * 1 + parameters.push[4];
+      expect(getStrokeTime(strokes)).toBe(expectedTime);
+    });
+
+    test("二つ前に同じ手でキーを押していた場合、move * 距離 * 0.3が加算されること", () => {
+      const strokes: Keystroke[] = [
+        { key: "a", shiftKey: false },
+        { key: "j", shiftKey: false },
+        { key: "g", shiftKey: false },
+      ];
+      const expectedTime =
+        parameters.push[1] +
+        (parameters.alt + parameters.push[7]) +
+        (parameters.alt + parameters.push[4] + parameters.move * 1 * 0.3);
       expect(getStrokeTime(strokes)).toBe(expectedTime);
     });
   });
