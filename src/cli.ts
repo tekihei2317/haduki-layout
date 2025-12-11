@@ -13,7 +13,6 @@ function runKeystrokes(datasetPath: string) {
     .filter((cols) => cols.length >= 2)
     .map(([kana, count]) => ({ kana, count: Number(count) }));
 
-  const exampleLayout = generateLayout(top26Kanas);
   printLayout(exampleLayout);
 
   let totalWithShiftCount = 0;

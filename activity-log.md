@@ -2,6 +2,105 @@
 
 ## 日付
 
+### 2025-12-11
+
+書き忘れていた。やっと配列の探索第一弾が完成した。初手は貪欲法で実装。
+
+力尽きたので一旦ここでマージして勉強に戻る。ここから改善を積み重ねて理想に近づけていく。今日見つかった配列は以下。拗音になる「ひ」が「ゅ」と同じ位置にあり、バリデーションは通しているので不備があるみたいだ。また明日修正する。
+
+```
+$ bun run src/cli.ts search
+んいのてさなせとりっ
+すゃゅるはこうょ゛た
+つあーにらかくれきし
+
+むやへぬ　ほ　　　　
+よ　　け　　　　　　
+もねふ　　　　　　　
+
+そゆ　　　　　　　　
+　　　　　えま　　め
+ろわ　　　をお　　　
+
+、　。　　　　　　ち
+　　ひ　み　　　　　
+　　　　　　　　　　
+```
+
+配列をJSONで出力して打鍵効率を評価してみた。
+
+```
+$ bun run src/cli.ts keystrokes
+{
+  "totalKana": 1190182,
+  "keystrokesWithoutShift": 1496399,
+  "keystrokesWithShift": 1574516,
+  "efficiencyKanaPerKeystrokeWithoutShift": 1.2572858604818422,
+  "efficiencyKanaPerKeystrokeWithShift": 1.3229203600793829
+}
+```
+
+データセットが違うのもあり、打鍵効率は最高より2%程度低い。これは単打に配置するかなで決まっているので探索の良し悪しはここからは分からない。
+
+続いて打鍵時間の推測。だいたい800kpmくらいが出る計算になっている。
+
+```
+$ bun run src/cli.ts stroke-time < words/e-typing-issunbousi.txt
+{
+  "totalMs": 10049.916275399128,
+  "totalMsByTrigram": 10049.916275399128,
+  "strokes": 134,
+  "kanaCount": 100,
+  "efficiency": 1.34,
+  "kpm": 800.0066647003679,
+  "strokeString": "qkhrlmk/lwtqgwpaqylj/vrdwglorln;ynkzmprwdojk/;Emkglxtqgmkxkqnkjnelrcdxdnkzmprwdojk/;ErlgwprjkwojkaEwpaqylj/gGwdhedicdxdrlrlnfdrw.jk/;E"
+}
+haduki-layout on  stroke-time-heuristic [!⇡] via 🥟 v1.2.17
+$ bun run src/cli.ts stroke-time < words/e-typing-sarukani.txt
+{
+  "totalMs": 7842.633001209263,
+  "totalMsByTrigram": 7842.633001209262,
+  "strokes": 107,
+  "kanaCount": 85,
+  "efficiency": 1.2588235294117647,
+  "kpm": 818.6026298833688,
+  "strokeString": "gwdm;knk;lun.e;xdQ;ltywigtGrlyd/lmfqlEnvnlwjitp.jkw;n.e;xdnb;knlrlr.rGfGfjPvmlqmlqmkmk.myo;mtqen.nlGeojk/;E"
+}
+haduki-layout on  stroke-time-heuristic [!⇡] via 🥟 v1.2.17
+$ bun run src/cli.ts stroke-time < words/e-typing-kaguyahime.txt
+{
+  "totalMs": 10117.737394195108,
+  "totalMsByTrigram": 10117.737394195108,
+  "strokes": 138,
+  "kanaCount": 101,
+  "efficiency": 1.3663366336633664,
+  "kpm": 818.3647862565122,
+  "strokeString": "mk/lwtqnl;fdwdclrlxdzdinlDnprwfcd/.ly;fdnkGzfdjk/;Emk/lwtqnlqke;fdnk.prGfiynvqk,gnxkwb/wmkqyehnlw;erlaEqkehnknmlwdD;kiyzlfd;wuzvqk;lrjk/;E"
+}
+haduki-layout on  stroke-time-heuristic [!⇡] via 🥟 v1.2.17
+$ bun run src/cli.ts stroke-time < words/e-typing-momotarou.txt
+{
+  "totalMs": 9513.405611452123,
+  "totalMsByTrigram": 9513.40561145212,
+  "strokes": 125,
+  "kanaCount": 97,
+  "efficiency": 1.288659793814433,
+  "kpm": 788.3612143028561,
+  "strokeString": "mkglxtqnlnxkrluq;mnk/rwfimkmk.yzdzdnlynl,r.jk/;Emkglxtqgdlpmo/rzdzdnkwhkvzdPnhko.prGfiQyqiynnbflq.ymkihexnpsqnlidl;l/r.;erlaE"
+}
+haduki-layout on  stroke-time-heuristic [!⇡] via 🥟 v1.2.17
+$ bun run src/cli.ts stroke-time < words/e-typing-omusubi.txt
+{
+  "totalMs": 8178.052404452221,
+  "totalMsByTrigram": 8178.052404452221,
+  "strokes": 109,
+  "kanaCount": 86,
+  "efficiency": 1.2674418604651163,
+  "kpm": 799.7014052440594,
+  "strokeString": "mk/lwtqnlmkwnfdrwmimkqdadlghzkhzkhzknlprQxyvmkPr/jkp;erlaEafixyeynnbQmkqdadlhzkoqapiqiqQiadj.yj;nl.hhkr.jk/;E"
+}
+```
+
 ### 2025-12-08
 
 引き続き打鍵効率を最小化する配列を作成する関数を実装していく。なんでも想像しているより時間がかかるものだなぁ。30分で片付けようと思ったものが70分かかり、さらに間違いも残っている。
