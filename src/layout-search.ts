@@ -259,11 +259,11 @@ type State = { layout: Layout; depth: number; score: Score };
  *
  * その手順で配置するかなを配置したときに打てるようになる、3-gramのコストの総和
  */
-function evaluateScore(state: State, trigrams: TrigramEntry[]): void {
+function evaluateScore(layout: Layout, trigrams: TrigramEntry[]): number {
   const score = trigrams
-    .map((trigram) => getTrigramTailTime(state.layout, trigram.trigram))
+    .map((trigram) => getTrigramTailTime(layout, trigram.trigram) * trigram.count)
     .reduce((sum, time) => sum + time, 0);
-  state.score = score;
+  return score;
 }
 
 /**
@@ -321,18 +321,18 @@ function beamSearchLayout({
   kanaOrder,
   trigrams,
   beamWidth,
-  isOneStroke,
 }: {
   kanaOrder: string[];
   trigrams: TrigramEntry[];
   beamWidth: number;
-  isOneStroke: (kana: string) => boolean;
 }): Layout {
   const trigramsMap = makeTrigramsMap(trigrams, kanaOrder);
-  console.log("trigram map created");
   const initialLayout = createLayoutWithShiftKeys();
   const state: State = { layout: initialLayout, depth: 0, score: 0 };
   let beam: State[] = [state];
+
+  const top26 = kanaOrder.filter((kana) => !punctuation.has(kana)).slice(0, 26);
+  const isTop26 = (kana: string) => top26.includes(kana);
 
   for (let i = 0; i < kanaOrder.length; i++) {
     const kana: Kana = kanaOrder[i] as Kana;
@@ -342,18 +342,23 @@ function beamSearchLayout({
     for (let j = 0; j < Math.min(beamWidth, beam.length); j++) {
       const state = beam[j];
 
-      const places = getValidPlaces(state.layout, kana)
-        .filter((p) => (isOneStroke(kana) ? p.slot === "oneStroke" : true))
-        .filter((p) => (!isOneStroke(kana) ? p.slot !== "oneStroke" : true));
+      // TOP26は単打に配置
+      const places = getValidPlaces(state.layout, kana).filter((place) => {
+        if (isTop26(kana)) {
+          return place.slot === "oneStroke";
+        } else {
+          return place.slot !== "oneStroke";
+        }
+      });
 
       for (const place of places) {
         const newLayout = placeKana(state.layout, place, kana);
+        const scoreDiff = evaluateScore(newLayout, trigramsMap[i] ?? []);
         const nextState: State = {
           layout: newLayout,
           depth: state.depth + 1,
-          score: 0,
+          score: state.score + scoreDiff,
         };
-        evaluateScore(nextState, trigramsMap[i] ?? []);
         nextBeam.push(nextState);
       }
     }
@@ -369,14 +374,8 @@ function beamSearchLayout({
 
 export function searchLayout(options: SearchLayoutOptions = {}): Layout {
   const trigrams = options.trigrams ?? loadTrigramDataset();
-  const baseOrder = options.kanaOrder ?? loadKanaByFrequency();
-  const kanaOrder = reorderKanaOrder(baseOrder);
-
-  // TOP26を単打に配置することにする
-  const top26 = baseOrder.filter((k) => !punctuation.has(k)).slice(0, 26);
-  const isOneStroke = (kana: string) => top26.includes(kana);
-
-  const layout = beamSearchLayout({ kanaOrder, trigrams, beamWidth: 500, isOneStroke });
+  const kanaOrder = options.kanaOrder ?? loadKanaByFrequency();
+  const layout = beamSearchLayout({ kanaOrder, trigrams, beamWidth: 500 });
 
   return validateLayout(layout);
 }
