@@ -190,7 +190,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
   const kogakiBase = kogakiInverse[kana];
   if (kogakiBase) {
     const baseInfo = findSlot(layout, kogakiBase);
-    if (!baseInfo) throw new Error(`${kogakiBase} がレイアウトに見つかりません`);
+    if (!baseInfo) throw new StrokeConversionError(`${kogakiBase} がレイアウトに見つかりません`);
     return [keystroke(baseInfo.position, true)];
   }
 
@@ -198,7 +198,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
   const base = dakutenInverse[kana];
   if (base) {
     const baseInfo = findSlot(layout, base);
-    if (!baseInfo) throw new Error(`${base} がレイアウトに見つかりません`);
+    if (!baseInfo) throw new StrokeConversionError(`${base} がレイアウトに見つかりません`);
 
     if (["ぱ", "ぴ", "ぷ", "ぺ", "ぽ"].includes(kana)) {
       if (kana === "ぴ") {
@@ -220,7 +220,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
     }
   }
 
-  throw new Error(`${kana} を入力する方法が見つかりません`);
+  throw new StrokeConversionError(`${kana} を入力する方法が見つかりません`);
 };
 
 const isYouonSuffix = (kana: string) => ["ゃ", "ゅ", "ょ"].includes(kana);
@@ -324,11 +324,7 @@ export function textToStrokes(layout: Layout, text: string): KeystrokeWithIndex[
     }
 
     const oneChar = normalized[i];
-    try {
-      strokes.push(...strokesForKana(layout, oneChar).map((stroke) => addIndex(stroke, strokeUnitIndex)));
-    } catch {
-      // console.warn(`未対応の文字をスキップ: ${oneChar}`);
-    }
+    strokes.push(...strokesForKana(layout, oneChar).map((stroke) => addIndex(stroke, strokeUnitIndex)));
   }
 
   return strokes;

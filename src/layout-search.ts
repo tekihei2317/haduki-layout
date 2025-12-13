@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
   Kana,
   Kanas,
@@ -15,50 +14,7 @@ import {
 import { objectFromEntries } from "./utils";
 import { StrokeConversionError, textToStrokes } from "./stroke";
 import { getTrigramStrokeTime } from "./stroke-time";
-
-export type TrigramEntry = { trigram: string; count: number };
-
-/**
- * wikipedia.hiragana-ized.3gram.txt を読み込んで3-gramの配列を返す
- */
-export function loadTrigramDataset(path = "dataset/wikipedia.hiragana-ized.3gram.txt"): TrigramEntry[] {
-  const lines = readFileSync(path, "utf-8")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  return lines.map((line) => {
-    const [countStr, trigram] = line.split("\t");
-    return { trigram, count: Number(countStr) };
-  });
-}
-
-const shiftKeyKanas = new Set(["ゃ", "ゅ", "ょ"]);
-
-export type OneGramEntry = { kana: string; count: number };
-
-/**
- * wikipedia.hiragana-ized.1gram.txt を読み込み、頻度順（降順）にかなを並べる
- * シフトキーのかな（ゃ/ゅ/ょ）は除外する
- */
-export function loadKanaByFrequency(path = "dataset/wikipedia.hiragana-ized.1gram.txt"): string[] {
-  const lines = readFileSync(path, "utf-8")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  const entries: OneGramEntry[] = lines.map((line) => {
-    const [countStr, kana] = line.split("\t");
-    return { kana, count: Number(countStr) };
-  });
-
-  const kanaSet = new Set(Object.keys(Kanas));
-
-  return entries
-    .filter((entry) => kanaSet.has(entry.kana) && !shiftKeyKanas.has(entry.kana))
-    .sort((a, b) => b.count - a.count)
-    .map((entry) => entry.kana);
-}
+import { loadKanaByFrequency, loadTrigramDataset, TrigramEntry } from "./dataset";
 
 function createEmptyLayout(): Layout {
   const entries = keyPositions.map(
@@ -135,28 +91,76 @@ export type SearchLayoutOptions = {
   kanaOrder?: string[];
 };
 
+export type LayoutScore = {
+  score: number;
+  totalCount: number;
+  totalSeconds: number;
+  kpm: number;
+};
+
 /**
- * 打鍵単位3-gramの、最後の1単位を入力するのにかかる時間を計算する
+ * 打鍵単位3-gramの、最後の1単位に関する情報を返す
  */
-function getTrigramTailTime(layout: Layout, trigram: TrigramEntry): number {
+function getTrigramTailInfo(layout: Layout, trigram: string): { time: number; strokeCount: number } {
   try {
-    const strokes = textToStrokes(layout, trigram.trigram);
+    const strokes = textToStrokes(layout, trigram);
     let time = 0;
-    for (let i = 0; i < strokes.length - 2; i++) {
+    let strokeCount = 0;
+    for (let i = 2; i < strokes.length; i++) {
       if (strokes[i].strokeUnitIndex < 2) {
         // 1文字目と2文字目はスキップ
         continue;
       }
-      time += getTrigramStrokeTime([strokes[i], strokes[i + 1], strokes[i + 2]]);
+      time += getTrigramStrokeTime([strokes[i - 2], strokes[i - 1], strokes[i]]);
+      strokeCount++;
     }
-    return time * trigram.count;
+    return { time, strokeCount: strokeCount };
   } catch (e) {
     if (e instanceof StrokeConversionError) {
       // まだ打てない文字がある場合は無視する
-      return 0;
+      return { time: 0, strokeCount: 0 };
     }
     throw e;
   }
+}
+
+/**
+ * 打鍵単位3-gramの、最後の1単位を入力するのにかかる時間を計算する
+ */
+function getTrigramTailTime(layout: Layout, trigram: string): number {
+  return getTrigramTailInfo(layout, trigram).time;
+}
+
+/**
+ * レイアウトのスコアを計算する
+ * - score: 3-gramの件数を秒数で割ったもの、とりあえず
+ * - totalCount: 対象3-gramの総出現回数
+ * - totalSeconds: 3文字目打鍵にかかる時間（秒）
+ * - kpm: strokes/分（3文字目部分のみ）
+ */
+export function scoreLayout(layout: Layout, trigrams: TrigramEntry[]): LayoutScore {
+  let totalTimeMs = 0;
+  let totalCount = 0;
+  let totalStrokes = 0;
+
+  for (const entry of trigrams) {
+    const info = getTrigramTailInfo(layout, entry.trigram);
+    if (info.time > 0) {
+      totalCount += entry.count;
+      totalTimeMs += info.time * entry.count;
+      totalStrokes += info.strokeCount * entry.count;
+    }
+  }
+
+  const totalSeconds = totalTimeMs / 1000;
+  const kpm = totalSeconds === 0 ? 0 : (totalStrokes * 60) / totalSeconds;
+
+  return {
+    score: Math.round((totalCount / totalSeconds) * 1000 * 60),
+    kpm: Math.round(kpm),
+    totalSeconds: Math.round(totalSeconds),
+    totalCount,
+  };
 }
 
 /**
@@ -167,7 +171,7 @@ function getTrigramTailTime(layout: Layout, trigram: TrigramEntry): number {
  */
 export function searchLayout(options: SearchLayoutOptions = {}): Layout {
   const layout = createLayoutWithShiftKeys();
-  const trigrams = new Set(options.trigrams ?? loadTrigramDataset());
+  const trigrams = new Set(options.trigrams ?? loadTrigramDataset().slice(0, 1000));
 
   const kanaOrder = options.kanaOrder ?? loadKanaByFrequency(); // shiftキーは除外済み
   const top26 = kanaOrder.filter((k) => !punctuation.has(k)).slice(0, 26);
@@ -193,7 +197,7 @@ export function searchLayout(options: SearchLayoutOptions = {}): Layout {
         [candidate.position]: { ...layout[candidate.position], [candidate.slot]: kana as Kana },
       };
       for (const trigram of relatedTrigrams) {
-        cost += getTrigramTailTime(newLayout, trigram);
+        cost += getTrigramTailTime(newLayout, trigram.trigram) * trigram.count;
       }
       if (cost < best_cost) {
         best_cost = cost;
@@ -205,7 +209,7 @@ export function searchLayout(options: SearchLayoutOptions = {}): Layout {
     // 打てるようになった3-gramを削除する
     for (const trigram of trigrams) {
       if (!trigram.trigram.includes(kana)) continue;
-      if (getTrigramTailTime(layout, trigram) > 0) {
+      if (getTrigramTailTime(layout, trigram.trigram) > 0) {
         trigrams.delete(trigram);
       }
     }

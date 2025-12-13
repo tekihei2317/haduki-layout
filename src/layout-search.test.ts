@@ -2,14 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createLayoutWithShiftKeys,
-  getPlacementCandidates,
-  loadKanaByFrequency,
-  loadTrigramDataset,
-  searchLayout,
-} from "./layout-search";
+import { createLayoutWithShiftKeys, getPlacementCandidates, searchLayout, scoreLayout } from "./layout-search";
 import { validateLayout } from "./core";
+import { loadKanaByFrequency, loadTrigramDataset } from "./dataset";
 
 describe("loadTrigramDataset", () => {
   test("タブ区切りの3-gramデータを読み込めること", () => {

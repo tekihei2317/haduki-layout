@@ -4,7 +4,8 @@ import { keystrokeCountForKana, strokesForKana, KanaCount, textToStrokes, keystr
 import { generateLayout, printLayout } from "./generate-random";
 import { getStrokeTime, getStrokeTimeByTrigram } from "./stroke-time";
 import { layoutToRomanTableString } from "./roman-table";
-import { searchLayout } from "./layout-search";
+import { scoreLayout, searchLayout } from "./layout-search";
+import { loadTrigramDataset } from "./dataset";
 
 function runKeystrokes(datasetPath: string) {
   const lines = readFileSync(datasetPath, "utf-8").trim().split("\n");
@@ -101,6 +102,23 @@ function runSearchLayout() {
   printLayout(layout);
 }
 
+function runScoreLayout() {
+  const layout = exampleLayout;
+  const trigrams = loadTrigramDataset();
+  const score = scoreLayout(layout, trigrams);
+
+  // 3-gramの合計1094322391エントリから、未対応のゖを含む2128+1443+1318エントリを除外した件数
+  const EXPECTED_TOTAL_COUNT = 1094317502;
+  if (score.totalCount !== EXPECTED_TOTAL_COUNT) {
+    console.log("3-gramの件数の数え上げが間違っています");
+    console.log(
+      `expected: ${EXPECTED_TOTAL_COUNT}, actual: ${score.totalCount}, diff: ${score.totalCount - EXPECTED_TOTAL_COUNT}`
+    );
+  }
+
+  console.log(JSON.stringify(score, null, 2));
+}
+
 async function main() {
   const [, , command, ...args] = process.argv;
   switch (command) {
@@ -124,6 +142,10 @@ async function main() {
     }
     case "search": {
       runSearchLayout();
+      break;
+    }
+    case "score": {
+      runScoreLayout();
       break;
     }
     default:
