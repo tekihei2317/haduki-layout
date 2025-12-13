@@ -15,6 +15,7 @@ import { objectFromEntries } from "./utils";
 import { StrokeConversionError, textToStrokes } from "./stroke";
 import { getTrigramStrokeTime } from "./stroke-time";
 import { loadKanaByFrequency, loadTrigramDataset, TrigramEntry } from "./dataset";
+import { printLayout } from "./generate-random";
 
 function createEmptyLayout(): Layout {
   const entries = keyPositions.map(
@@ -157,7 +158,7 @@ export function scoreLayout(layout: Layout, trigrams: TrigramEntry[]): LayoutSco
 
   return {
     score: Math.round((totalCount / totalSeconds) * 1000 * 60),
-    kpm: Math.round(kpm),
+    kpm: Math.round(kpm * 100) / 100,
     totalSeconds: Math.round(totalSeconds),
     totalCount,
   };
@@ -171,16 +172,24 @@ export function scoreLayout(layout: Layout, trigrams: TrigramEntry[]): LayoutSco
  */
 export function searchLayout(options: SearchLayoutOptions = {}): Layout {
   const layout = createLayoutWithShiftKeys();
-  const trigrams = new Set(options.trigrams ?? loadTrigramDataset().slice(0, 1000));
+  const trigrams = new Set(options.trigrams ?? loadTrigramDataset().slice(0, 3000));
 
   const kanaOrder = options.kanaOrder ?? loadKanaByFrequency(); // shiftキーは除外済み
   const top26 = kanaOrder.filter((k) => !punctuation.has(k)).slice(0, 26);
   const isTop26 = (kana: string) => top26.includes(kana);
 
+  // 拗音を最後の方に配置すると配置できなくなる場合があるので、少し前にしておく
+  const index = kanaOrder.indexOf("ひ");
+  if (index > -1) {
+    kanaOrder.splice(index, 1);
+    const target = 41;
+    kanaOrder.splice(target, 0, "ひ");
+  }
+
   for (const kana of kanaOrder) {
-    const candidates = getPlacementCandidates(layout, kana as Kana).filter((c) =>
-      isTop26(kana) ? c.slot === "oneStroke" : true
-    );
+    const candidates = getPlacementCandidates(layout, kana as Kana)
+      .filter((c) => (isTop26(kana) ? c.slot === "oneStroke" : true))
+      .filter((c) => (!isTop26(kana) ? c.slot !== "oneStroke" : true));
 
     if (candidates.length === 0) {
       throw new Error(`${kana} を配置できる候補がありません`);

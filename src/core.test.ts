@@ -82,6 +82,42 @@ describe("validateLayout", () => {
 
       expect(() => validateLayout(layout)).not.toThrow();
     });
+
+    test("ゅシフトの通常シフトに句読点以外があるとエラーになる", () => {
+      const layout: Layout = {
+        ...baseLayout,
+        0: { oneStroke: "ゅ", normalShift: "あ" },
+      };
+
+      expect(() => validateLayout(layout)).toThrow("ゅシフトキーの通常シフトには句読点以外を配置できません");
+    });
+
+    test("ゅシフトの通常シフトに句読点があっても通る", () => {
+      const layout: Layout = {
+        ...baseLayout,
+        0: { oneStroke: "ゅ", normalShift: "、" },
+      };
+
+      expect(() => validateLayout(layout)).not.toThrow();
+    });
+
+    test("ょシフトの通常シフトに句読点以外があるとエラーになる", () => {
+      const layout: Layout = {
+        ...baseLayout,
+        0: { oneStroke: "ょ", normalShift: "あ" },
+      };
+
+      expect(() => validateLayout(layout)).toThrow("ょシフトキーの通常シフトには句読点以外を配置できません");
+    });
+
+    test("ょシフトの通常シフトに句読点があっても通る", () => {
+      const layout: Layout = {
+        ...baseLayout,
+        0: { oneStroke: "ょ", normalShift: "。" },
+      };
+
+      expect(() => validateLayout(layout)).not.toThrow();
+    });
   });
 
   describe("拗音に関するルール", () => {

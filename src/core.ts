@@ -205,6 +205,13 @@ export function validateKeyAssignment(ka: KeyAssignment) {
     if ((ka.oneStroke === "ゃ" || ka.oneStroke === "゛") && ka.normalShift) {
       throw new LayoutValidationError(`濁点シフトキー（${ka.oneStroke}）の通常シフトにはかなを配置できません`);
     }
+
+    // ゅ後置シフトとょ後置シフトの通常シフトには句読点以外は配置されていないこと
+    if ((ka.oneStroke === "ゅ" || ka.oneStroke === "ょ") && ka.normalShift) {
+      if (!["、", "。"].includes(ka.normalShift)) {
+        throw new LayoutValidationError(`${ka.oneStroke}シフトキーの通常シフトには句読点以外を配置できません`);
+      }
+    }
   }
 
   // 拗音に関するルール:
