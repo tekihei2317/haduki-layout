@@ -61,3 +61,120 @@ export const top26Kanas: (keyof typeof Kanas)[] = [
   "さ",
   "あ",
 ];
+
+export const layout20251211greedy: Layout = {
+  "0": {
+    oneStroke: "ん",
+    shift1: "む",
+    shift2: "そ",
+    normalShift: "、",
+  },
+  "1": {
+    oneStroke: "い",
+    shift1: "や",
+    shift2: "ゆ",
+  },
+  "2": {
+    oneStroke: "の",
+    shift1: "へ",
+    normalShift: "。",
+  },
+  "3": {
+    oneStroke: "て",
+    shift1: "ぬ",
+  },
+  "4": {
+    oneStroke: "さ",
+  },
+  "5": {
+    oneStroke: "な",
+    shift1: "ほ",
+  },
+  "6": {
+    oneStroke: "せ",
+  },
+  "7": {
+    oneStroke: "と",
+  },
+  "8": {
+    oneStroke: "り",
+  },
+  "9": {
+    oneStroke: "っ",
+    normalShift: "ち",
+  },
+  "10": {
+    oneStroke: "す",
+    shift1: "よ",
+  },
+  "11": {
+    oneStroke: "ゃ",
+  },
+  "12": {
+    oneStroke: "ゅ",
+    normalShift: "ひ",
+  },
+  "13": {
+    oneStroke: "る",
+    shift1: "け",
+  },
+  "14": {
+    oneStroke: "は",
+    normalShift: "み",
+  },
+  "15": {
+    oneStroke: "こ",
+    shift2: "え",
+  },
+  "16": {
+    oneStroke: "う",
+    shift2: "ま",
+  },
+  "17": {
+    oneStroke: "ょ",
+  },
+  "18": {
+    oneStroke: "゛",
+  },
+  "19": {
+    oneStroke: "た",
+    shift2: "め",
+  },
+  "20": {
+    oneStroke: "つ",
+    shift1: "も",
+    shift2: "ろ",
+  },
+  "21": {
+    oneStroke: "あ",
+    shift1: "ね",
+    shift2: "わ",
+  },
+  "22": {
+    oneStroke: "ー",
+    shift1: "ふ",
+  },
+  "23": {
+    oneStroke: "に",
+  },
+  "24": {
+    oneStroke: "ら",
+  },
+  "25": {
+    oneStroke: "か",
+    shift2: "を",
+  },
+  "26": {
+    oneStroke: "く",
+    shift2: "お",
+  },
+  "27": {
+    oneStroke: "れ",
+  },
+  "28": {
+    oneStroke: "き",
+  },
+  "29": {
+    oneStroke: "し",
+  },
+};

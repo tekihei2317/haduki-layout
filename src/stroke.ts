@@ -1,4 +1,4 @@
-import { Kanas, Layout, OrderedInfos } from "./core";
+import { Kanas, Layout, KeyAssignment } from "./core";
 import assert from "node:assert/strict";
 
 export type Keystroke = { key: string; shiftKey: boolean };
@@ -34,6 +34,39 @@ const positionToUsKeyboardKeyMap: Record<string, string> = {
   "27": ",",
   "28": ".",
   "29": "/",
+};
+
+const shiftedKeyMap: Record<string, string> = {
+  q: "Q",
+  w: "W",
+  e: "E",
+  r: "R",
+  t: "T",
+  y: "Y",
+  u: "U",
+  i: "I",
+  o: "O",
+  p: "P",
+  a: "A",
+  s: "S",
+  d: "D",
+  f: "F",
+  g: "G",
+  h: "H",
+  j: "J",
+  k: "K",
+  l: "L",
+  ";": ":",
+  z: "Z",
+  x: "X",
+  c: "C",
+  v: "V",
+  b: "B",
+  n: "N",
+  m: "M",
+  ",": "<",
+  ".": ">",
+  "/": "?",
 };
 
 const dakutenInverse: Record<string, string> = {
@@ -73,7 +106,7 @@ const kogakiInverse: Record<string, string> = {
   ぉ: "お",
 };
 
-const keyForPosition = (position: string) => {
+export const keyForPosition = (position: string) => {
   const key = positionToUsKeyboardKeyMap[position];
   if (!key) throw new Error(`unknown key position: ${position}`);
   return key;
@@ -93,7 +126,7 @@ const toHiragana = (kana: string): string =>
     })
     .join("");
 
-type Slot = keyof Pick<OrderedInfos, "oneStroke" | "shift1" | "shift2" | "normalShift">;
+type Slot = keyof Pick<KeyAssignment, "oneStroke" | "shift1" | "shift2" | "normalShift">;
 
 /**
  * かながどのキー位置のスロット（単打/ゅシフト/ょシフト/通常シフト）に配置されているかを検索する
@@ -196,6 +229,8 @@ const isGairaionSuffix = (kana: string) => ["ぁ", "ぃ", "ぅ", "ぇ", "ぉ"].i
 
 const isDakuon = (kana: string): boolean => dakutenInverse[kana] !== undefined;
 
+export class StrokeConversionError extends Error {}
+
 /**
  * 打鍵単位を打つためのストロークを計算する
  */
@@ -236,7 +271,7 @@ export function strokesForKana(layout: Layout, kana: string): Keystroke[] {
     }
   }
 
-  throw new Error(`${kana} を入力する方法が見つかりません`);
+  throw new StrokeConversionError(`${kana} を入力する方法が見つかりません`);
 }
 
 export function keystrokeCountForKana(layout: Layout, kana: string): number {
@@ -258,4 +293,57 @@ export type KanaCount = { kana: string; count: number };
 
 export function totalKeystrokesForDataset(layout: Layout, dataset: KanaCount[]): number {
   return dataset.reduce((sum, { kana, count }) => sum + keystrokeCountForKana(layout, kana) * count, 0);
+}
+
+type KeystrokeWithIndex = Keystroke & { strokeUnitIndex: number };
+
+/**
+ * ひらがなテキストをストローク列に変換する
+ *
+ * 2文字組（拗音・外来音など）は優先的に解釈し、失敗した場合は1文字ずつ解釈する。
+ * 未対応の文字はスキップし、警告を出力する。
+ */
+export function textToStrokes(layout: Layout, text: string): KeystrokeWithIndex[] {
+  const strokes: KeystrokeWithIndex[] = [];
+  const normalized = text.replace(/\s+/g, "");
+
+  const addIndex = (stroke: Omit<Keystroke, "strokeUnitIndex">, strokeUnitIndex: number): KeystrokeWithIndex => ({
+    ...stroke,
+    strokeUnitIndex,
+  });
+  for (let i = 0, strokeUnitIndex = 0; i < normalized.length; i++, strokeUnitIndex++) {
+    const twoChars = normalized.slice(i, i + 2);
+    if (twoChars.length === 2) {
+      try {
+        strokes.push(...strokesForKana(layout, twoChars).map((stroke) => addIndex(stroke, strokeUnitIndex)));
+        i += 1;
+        continue;
+      } catch {
+        // 1文字解釈にフォールバック
+      }
+    }
+
+    const oneChar = normalized[i];
+    try {
+      strokes.push(...strokesForKana(layout, oneChar).map((stroke) => addIndex(stroke, strokeUnitIndex)));
+    } catch {
+      // console.warn(`未対応の文字をスキップ: ${oneChar}`);
+    }
+  }
+
+  return strokes;
+}
+
+/**
+ * ストローク列を文字列化する（shift付きはシフト面の記号に変換）
+ */
+export function keystrokesToString(strokes: Keystroke[]): string {
+  return strokes
+    .map(({ key, shiftKey }) => {
+      if (!shiftKey) return key;
+      const shifted = shiftedKeyMap[key];
+      if (!shifted) throw new Error(`シフトに対応していないキーです: ${key}`);
+      return shifted;
+    })
+    .join("");
 }
