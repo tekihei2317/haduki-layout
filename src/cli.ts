@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
-import { layout20251211greedy, layout20251213beamsearch as exampleLayout, top26Kanas } from "./layout-fixtures";
+import {
+  layout20251211greedy,
+  layout20251213beamsearch as exampleLayout,
+  top26Kanas,
+  layout20251216adcale,
+  layout20251216middleRow,
+} from "./layout-fixtures";
 import { keystrokeCountForKana, strokesForKana, KanaCount, textToStrokes, keystrokesToString } from "./stroke";
 import { generateLayout, printLayout } from "./generate-random";
 import { getStrokeTime, getStrokeTimeByTrigram } from "./stroke-time";
 import { layoutToRomanTableString } from "./roman-table";
 import { scoreLayout, searchLayout } from "./layout-search";
 import { loadTrigramDataset } from "./dataset";
-import { Layout } from "./core";
+import { Layout, validateLayout } from "./core";
 
 function runKeystrokes(datasetPath: string) {
   const lines = readFileSync(datasetPath, "utf-8").trim().split("\n");
@@ -95,10 +101,13 @@ function readStdin(): Promise<string> {
 }
 
 function generateRomanTable() {
-  console.log(layoutToRomanTableString(exampleLayout));
+  const layout = layout20251216adcale;
+  console.log(layoutToRomanTableString(layout));
 }
 
 function runScoreLayout(layout: Layout) {
+  validateLayout(layout);
+  printLayout(layout);
   const trigrams = loadTrigramDataset();
   const score = scoreLayout(layout, trigrams);
 
@@ -148,7 +157,7 @@ async function main() {
       break;
     }
     case "score": {
-      runScoreLayout(exampleLayout);
+      runScoreLayout(layout20251216middleRow);
       break;
     }
     default:

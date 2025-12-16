@@ -304,6 +304,15 @@ export function validateKeyAssignment(ka: KeyAssignment) {
     // 濁音になるかなが排他的に配置されていること
     throw new LayoutValidationError("濁音になるかなは1キーに1つまでです");
   }
+  if (dakuonKanas.length === 1) {
+    if (youonKanas.length === 1) {
+      // 拗音になるかなと濁音になるかなを一緒に配置しない（ゃ後置で濁音を打てるようにするため）
+      // き、し、ち、ひは濁音と拗音の両方にカウントされるので除外
+      if (dakuonKanas[0] !== youonKanas[0]) {
+        throw new LayoutValidationError("拗音になるかなと濁音になるかなを一緒に配置できません");
+      }
+    }
+  }
 
   // 半濁音に関するルール:
   const haKana = [ka.oneStroke, ka.shift1, ka.shift2, ka.normalShift].filter((kana) => kana === "は");

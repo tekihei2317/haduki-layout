@@ -412,3 +412,237 @@ export const layout20251213beamsearch: Layout = {
     shift2: "も",
   },
 };
+
+export const layout20251216adcale: Layout = {
+  "0": {
+    oneStroke: "こ",
+    normalShift: "み",
+  },
+  "1": {
+    oneStroke: "と",
+    shift1: "わ",
+    shift2: "ね",
+  },
+  "2": {
+    oneStroke: "の",
+    shift1: "ぬ",
+    shift2: "け",
+    normalShift: "、",
+  },
+  "3": {
+    oneStroke: "は",
+  },
+  "4": {
+    oneStroke: "す",
+  },
+  "5": {
+    oneStroke: "れ",
+    shift1: "へ",
+  },
+  "6": {
+    oneStroke: "つ",
+    shift1: "ゆ",
+  },
+  "7": {
+    oneStroke: "か",
+    shift1: "よ",
+  },
+  "8": {
+    oneStroke: "に",
+  },
+  "9": {
+    oneStroke: "り",
+  },
+  "10": {
+    oneStroke: "し",
+  },
+  "11": {
+    oneStroke: "ゃ",
+  },
+  "12": {
+    oneStroke: "ゅ",
+    normalShift: "。",
+  },
+  "13": {
+    oneStroke: "う",
+    shift2: "や",
+  },
+  "14": {
+    oneStroke: "な",
+    shift1: "ほ",
+  },
+  "15": {
+    oneStroke: "る",
+    normalShift: "ひ",
+  },
+  "16": {
+    oneStroke: "ん",
+    normalShift: "ち",
+  },
+  "17": {
+    oneStroke: "ょ",
+  },
+  "18": {
+    oneStroke: "゛",
+  },
+  "19": {
+    oneStroke: "い",
+    shift2: "そ",
+  },
+  "20": {
+    oneStroke: "あ",
+    shift1: "を",
+  },
+  "21": {
+    oneStroke: "さ",
+    shift1: "ま",
+    shift2: "え",
+  },
+  "22": {
+    oneStroke: "き",
+  },
+  "23": {
+    oneStroke: "た",
+  },
+  "24": {
+    oneStroke: "ら",
+    shift1: "ふ",
+  },
+  "25": {
+    oneStroke: "く",
+    shift2: "め",
+  },
+  "26": {
+    oneStroke: "っ",
+    shift1: "む",
+    shift2: "お",
+  },
+  "27": {
+    oneStroke: "て",
+  },
+  "28": {
+    oneStroke: "せ",
+    shift2: "ろ",
+  },
+  "29": {
+    oneStroke: "ー",
+    shift2: "も",
+  },
+};
+
+export const layout20251216middleRow: Layout = {
+  "0": {
+    oneStroke: "は",
+  },
+  "1": {
+    oneStroke: "し",
+  },
+  "2": {
+    oneStroke: "の",
+    shift1: "ぬ",
+    shift2: "け",
+    normalShift: "、",
+  },
+  "3": {
+    oneStroke: "た",
+  },
+  "4": {
+    oneStroke: "く",
+  },
+  "5": {
+    oneStroke: "り",
+  },
+  "6": {
+    oneStroke: "る",
+    normalShift: "ち",
+  },
+  "7": {
+    oneStroke: "か",
+    shift1: "よ",
+    normalShift: "。",
+  },
+  "8": {
+    oneStroke: "に",
+  },
+  "9": {
+    oneStroke: "こ",
+  },
+  "10": {
+    oneStroke: "と",
+    shift1: "を",
+    shift2: "ね",
+  },
+  "11": {
+    oneStroke: "ゃ",
+  },
+  "12": {
+    oneStroke: "ゅ",
+  },
+  "13": {
+    oneStroke: "う",
+    shift1: "ま",
+    shift2: "も",
+  },
+  "14": {
+    oneStroke: "あ",
+    shift1: "へ",
+  },
+  "15": {
+    oneStroke: "っ",
+    shift2: "わ",
+  },
+  "16": {
+    oneStroke: "ん",
+    shift1: "ゆ",
+    shift2: "お",
+  },
+  "17": {
+    oneStroke: "ょ",
+  },
+  "18": {
+    oneStroke: "゛",
+  },
+  "19": {
+    oneStroke: "い",
+    shift2: "そ",
+  },
+  "20": {
+    oneStroke: "さ",
+    shift1: "え",
+    shift2: "や",
+  },
+  "21": {
+    oneStroke: "れ",
+    shift1: "ふ",
+  },
+  "22": {
+    oneStroke: "な",
+    normalShift: "ひ",
+  },
+  "23": {
+    oneStroke: "す",
+  },
+  "24": {
+    oneStroke: "ら",
+    normalShift: "み",
+  },
+  "25": {
+    oneStroke: "つ",
+    shift1: "む",
+    shift2: "め",
+  },
+  "26": {
+    oneStroke: "き",
+  },
+  "27": {
+    oneStroke: "て",
+  },
+  "28": {
+    oneStroke: "せ",
+    shift2: "ろ",
+  },
+  "29": {
+    oneStroke: "ー",
+    shift1: "ほ",
+  },
+};

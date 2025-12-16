@@ -184,6 +184,14 @@ describe("validateLayout", () => {
 
       expect(() => validateLayout(layout)).toThrow("拗音になるかなと句読点以外は通常シフトに配置できません");
     });
+
+    test("拗音になるかなと濁音になるかなが同じ位置にあるとエラーになる", () => {
+      const layout: Layout = {
+        ...baseLayout,
+        0: { oneStroke: "か", normalShift: "み" },
+      };
+      expect(() => validateLayout(layout)).toThrow("拗音になるかなと濁音になるかなを一緒に配置できません");
+    });
   });
 
   describe("濁音に関するルール", () => {

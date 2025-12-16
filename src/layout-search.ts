@@ -34,8 +34,8 @@ function createEmptyLayout(): Layout {
 
 const fixedShiftKeyPositions: Record<string, KeyPosition> = {
   ゃ: 11, // s
-  ゅ: 2, // e
-  ょ: 7, // i
+  ゅ: 12, // d
+  ょ: 17, // k
   ゛: 18, // l
 };
 
@@ -78,8 +78,14 @@ export function getPlacementCandidates(layout: Layout, kana: Kana): PlacementCan
   const kanaInfo = Kanas[kana as keyof typeof Kanas];
   if (!kanaInfo || kanaInfo.type !== "normal") return [];
 
+  const isMiddleRow = (position: KeyPosition) => position >= 10 && position < 20;
+  const isHaRowKana = (k: Kana) => ["は", "ひ", "ふ", "へ", "ほ"].includes(k);
+
   const candidates: PlacementCandidate[] = [];
   for (const position of keyPositions) {
+    // 拗音になるかなは中段には置かない
+    if ((kanaInfo.isYouon || isHaRowKana(kana)) && isMiddleRow(position)) continue;
+
     for (const slot of keySlots) {
       if (canAssignKana(layout, position, slot, kana)) {
         candidates.push({ slot, position });
@@ -97,23 +103,29 @@ export type SearchLayoutOptions = {
 };
 
 function reorderKanaOrder(baseOrder: string[]): string[] {
-  const youonOrDaku: string[] = [];
-  const gairaion: string[] = [];
-  const others: string[] = [];
+  // TOP26（句読点除く）は元の順序を維持したまま残す。それ以外で、
+  // 濁音/拗音/外来音にならないかなを後ろに寄せる。
+  const top26 = baseOrder.filter((k) => !punctuation.has(k)).slice(0, 26);
+
+  const main: string[] = [];
+  const plainTail: string[] = [];
 
   for (const kana of baseOrder) {
     const info = Kanas[kana as keyof typeof Kanas];
     if (!info || info.type !== "normal") continue;
-    if (info.isYouon || info.isDakuon) {
-      youonOrDaku.push(kana);
-    } else if (info.isGairaion) {
-      gairaion.push(kana);
+
+    const isTop26 = top26.includes(kana);
+    const isPlain = !info.isYouon && !info.isDakuon && !info.isGairaion && !punctuation.has(kana);
+
+    if (!isTop26 && isPlain) {
+      // 後ろに固める対象
+      plainTail.push(kana);
     } else {
-      others.push(kana);
+      main.push(kana);
     }
   }
 
-  return [...youonOrDaku, ...gairaion, ...others];
+  return [...main, ...plainTail];
 }
 
 export type LayoutScore = {
@@ -336,7 +348,8 @@ function beamSearchLayout({
 
   for (let i = 0; i < kanaOrder.length; i++) {
     const kana: Kana = kanaOrder[i] as Kana;
-    console.log({ i, kana });
+    console.log({ i, kana, beams: beam.length });
+    printLayout(beam[0].layout);
 
     const nextBeam: State[] = [];
     for (let j = 0; j < Math.min(beamWidth, beam.length); j++) {
@@ -363,8 +376,8 @@ function beamSearchLayout({
       }
     }
     if (nextBeam.length === 0) {
-      console.log({ i, kana: kanaOrder[i], slice: kanaOrder.slice(i) });
-      break;
+      // これ以上配置できない場合は現在の最良状態を返す
+      return beam[0]?.layout ?? createLayoutWithShiftKeys();
     }
     nextBeam.sort((state1, state2) => state1.score - state2.score);
     beam = nextBeam.slice(0, beamWidth);
@@ -374,7 +387,8 @@ function beamSearchLayout({
 
 export function searchLayout(options: SearchLayoutOptions = {}): Layout {
   const trigrams = options.trigrams ?? loadTrigramDataset().slice(0, 4000);
-  const kanaOrder = options.kanaOrder ?? loadKanaByFrequency();
+  const baseOrder = options.kanaOrder ?? loadKanaByFrequency();
+  const kanaOrder = reorderKanaOrder(baseOrder);
   const layout = beamSearchLayout({ kanaOrder, trigrams, beamWidth: 100 });
 
   return validateLayout(layout);
