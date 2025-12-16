@@ -20,14 +20,17 @@ function createEmptyLayout(): Layout {
  */
 export function printLayout(layout: Layout) {
   const props = ["oneStroke", "shift1", "shift2", "normalShift"] as const;
+  const hasYouonBase = (pos: KeyPosition) => {
+    const assignment = layout[pos];
+    return Object.values(assignment).some((kana) => kana && Kanas[kana as keyof typeof Kanas]?.isYouon);
+  };
   for (const prop of props) {
     let line = "";
     for (const i of keyPositions) {
-      if (layout[i][prop]) {
-        line += layout[i][prop];
-      } else {
-        line += "　";
-      }
+      const value = layout[i][prop];
+      const isPostfix = prop === "shift1" || prop === "shift2";
+      const placeholder = isPostfix && !value && hasYouonBase(i) ? "＿" : "　";
+      line += value ?? placeholder;
       if (i % 10 === 9) {
         console.log(line);
         line = "";

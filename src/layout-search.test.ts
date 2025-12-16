@@ -5,11 +5,12 @@ import { join } from "node:path";
 import {
   createLayoutWithShiftKeys,
   getPlacementCandidates,
-  loadKanaByFrequency,
-  loadTrigramDataset,
   searchLayout,
+  scoreLayout,
+  getTrigramOrder,
 } from "./layout-search";
 import { validateLayout } from "./core";
+import { loadKanaByFrequency, loadTrigramDataset } from "./dataset";
 
 describe("loadTrigramDataset", () => {
   test("タブ区切りの3-gramデータを読み込めること", () => {
@@ -113,5 +114,38 @@ describe("searchLayout", () => {
     for (const [, count] of counts.entries()) {
       expect(count).toBe(1);
     }
+  });
+});
+
+describe("getTrigramOrder", () => {
+  test("一番順番が大きいものが採用されること", () => {
+    const kanaOrder = ["い", "う", "ん", "し"];
+
+    expect(getTrigramOrder("いいい", kanaOrder)).toBe(0);
+    expect(getTrigramOrder("いいう", kanaOrder)).toBe(1);
+    expect(getTrigramOrder("いうん", kanaOrder)).toBe(2);
+    expect(getTrigramOrder("うんし", kanaOrder)).toBe(3);
+  });
+
+  test("濁音の順番は清音での順番になること", () => {
+    const kanaOrder = ["い", "う", "ん", "し"];
+
+    expect(getTrigramOrder("いいゔ", kanaOrder)).toBe(1);
+    expect(getTrigramOrder("ゔんじ", kanaOrder)).toBe(3);
+  });
+
+  test("拗音の順番はゃゅょ抜きでの順番になること", () => {
+    const kanaOrder = ["い", "う", "ん", "し", "か", "き"];
+
+    expect(getTrigramOrder("いうしゃ", kanaOrder)).toBe(3);
+    expect(getTrigramOrder("んしゅきょ", kanaOrder)).toBe(5);
+  });
+
+  test("小書きの順番は対応する母音の順番になること", () => {
+    const kanaOrder = ["い", "う", "ん", "し"];
+
+    expect(getTrigramOrder("ぃぃぃ", kanaOrder)).toBe(0);
+    expect(getTrigramOrder("いいぅ", kanaOrder)).toBe(1);
+    expect(getTrigramOrder("ぃぅし", kanaOrder)).toBe(3);
   });
 });

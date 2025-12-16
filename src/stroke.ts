@@ -1,4 +1,4 @@
-import { Kanas, Layout, KeyAssignment } from "./core";
+import { Layout, KeyAssignment, kogakiInverse, dakutenInverse } from "./core";
 import assert from "node:assert/strict";
 
 export type Keystroke = { key: string; shiftKey: boolean };
@@ -67,43 +67,6 @@ const shiftedKeyMap: Record<string, string> = {
   ",": "<",
   ".": ">",
   "/": "?",
-};
-
-const dakutenInverse: Record<string, string> = {
-  が: "か",
-  ぎ: "き",
-  ぐ: "く",
-  げ: "け",
-  ご: "こ",
-  ざ: "さ",
-  じ: "し",
-  ず: "す",
-  ぜ: "せ",
-  ぞ: "そ",
-  だ: "た",
-  ぢ: "ち",
-  づ: "つ",
-  で: "て",
-  ど: "と",
-  ば: "は",
-  び: "ひ",
-  ぶ: "ふ",
-  べ: "へ",
-  ぼ: "ほ",
-  ぱ: "は",
-  ぴ: "ひ",
-  ぷ: "ふ",
-  ぺ: "へ",
-  ぽ: "ほ",
-  ゔ: "う",
-};
-
-const kogakiInverse: Record<string, string> = {
-  ぁ: "あ",
-  ぃ: "い",
-  ぅ: "う",
-  ぇ: "え",
-  ぉ: "お",
 };
 
 export const keyForPosition = (position: string) => {
@@ -190,7 +153,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
   const kogakiBase = kogakiInverse[kana];
   if (kogakiBase) {
     const baseInfo = findSlot(layout, kogakiBase);
-    if (!baseInfo) throw new Error(`${kogakiBase} がレイアウトに見つかりません`);
+    if (!baseInfo) throw new StrokeConversionError(`${kogakiBase} がレイアウトに見つかりません`);
     return [keystroke(baseInfo.position, true)];
   }
 
@@ -198,7 +161,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
   const base = dakutenInverse[kana];
   if (base) {
     const baseInfo = findSlot(layout, base);
-    if (!baseInfo) throw new Error(`${base} がレイアウトに見つかりません`);
+    if (!baseInfo) throw new StrokeConversionError(`${base} がレイアウトに見つかりません`);
 
     if (["ぱ", "ぴ", "ぷ", "ぺ", "ぽ"].includes(kana)) {
       if (kana === "ぴ") {
@@ -220,7 +183,7 @@ const strokesForSingleKana = (layout: Layout, kana: string): Keystroke[] => {
     }
   }
 
-  throw new Error(`${kana} を入力する方法が見つかりません`);
+  throw new StrokeConversionError(`${kana} を入力する方法が見つかりません`);
 };
 
 const isYouonSuffix = (kana: string) => ["ゃ", "ゅ", "ょ"].includes(kana);
@@ -324,11 +287,7 @@ export function textToStrokes(layout: Layout, text: string): KeystrokeWithIndex[
     }
 
     const oneChar = normalized[i];
-    try {
-      strokes.push(...strokesForKana(layout, oneChar).map((stroke) => addIndex(stroke, strokeUnitIndex)));
-    } catch {
-      // console.warn(`未対応の文字をスキップ: ${oneChar}`);
-    }
+    strokes.push(...strokesForKana(layout, oneChar).map((stroke) => addIndex(stroke, strokeUnitIndex)));
   }
 
   return strokes;

@@ -139,6 +139,74 @@ export const keyPositions = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 ] as const;
 
+export const dakuonKanas = [
+  "が",
+  "ぎ",
+  "ぐ",
+  "げ",
+  "ご",
+  "ざ",
+  "じ",
+  "ず",
+  "ぜ",
+  "ぞ",
+  "だ",
+  "ぢ",
+  "づ",
+  "で",
+  "ど",
+  "ば",
+  "び",
+  "ぶ",
+  "べ",
+  "ぼ",
+  "ぱ",
+  "ぴ",
+  "ぷ",
+  "ぺ",
+  "ぽ",
+  "ゔ",
+];
+
+export const dakutenInverse: Record<string, Kana> = {
+  が: "か",
+  ぎ: "き",
+  ぐ: "く",
+  げ: "け",
+  ご: "こ",
+  ざ: "さ",
+  じ: "し",
+  ず: "す",
+  ぜ: "せ",
+  ぞ: "そ",
+  だ: "た",
+  ぢ: "ち",
+  づ: "つ",
+  で: "て",
+  ど: "と",
+  ば: "は",
+  び: "ひ",
+  ぶ: "ふ",
+  べ: "へ",
+  ぼ: "ほ",
+  ぱ: "は",
+  ぴ: "ひ",
+  ぷ: "ふ",
+  ぺ: "へ",
+  ぽ: "ほ",
+  ゔ: "う",
+};
+
+export const kogakiKanas = ["ぁ", "ぃ", "ぅ", "ぇ", "ぉ"];
+
+export const kogakiInverse: Record<string, Kana> = {
+  ぁ: "あ",
+  ぃ: "い",
+  ぅ: "う",
+  ぇ: "え",
+  ぉ: "お",
+};
+
 export type KeyPosition = (typeof keyPositions)[number];
 
 export const keySlots = ["oneStroke", "shift1", "shift2", "normalShift"] as const;
@@ -205,6 +273,13 @@ export function validateKeyAssignment(ka: KeyAssignment) {
     if ((ka.oneStroke === "ゃ" || ka.oneStroke === "゛") && ka.normalShift) {
       throw new LayoutValidationError(`濁点シフトキー（${ka.oneStroke}）の通常シフトにはかなを配置できません`);
     }
+
+    // ゅ後置シフトとょ後置シフトの通常シフトには句読点以外は配置されていないこと
+    if ((ka.oneStroke === "ゅ" || ka.oneStroke === "ょ") && ka.normalShift) {
+      if (!["、", "。"].includes(ka.normalShift)) {
+        throw new LayoutValidationError(`${ka.oneStroke}シフトキーの通常シフトには句読点以外を配置できません`);
+      }
+    }
   }
 
   // 拗音に関するルール:
@@ -228,6 +303,15 @@ export function validateKeyAssignment(ka: KeyAssignment) {
   if (dakuonKanas.length > 1) {
     // 濁音になるかなが排他的に配置されていること
     throw new LayoutValidationError("濁音になるかなは1キーに1つまでです");
+  }
+  if (dakuonKanas.length === 1) {
+    if (youonKanas.length === 1) {
+      // 拗音になるかなと濁音になるかなを一緒に配置しない（ゃ後置で濁音を打てるようにするため）
+      // き、し、ち、ひは濁音と拗音の両方にカウントされるので除外
+      if (dakuonKanas[0] !== youonKanas[0]) {
+        throw new LayoutValidationError("拗音になるかなと濁音になるかなを一緒に配置できません");
+      }
+    }
   }
 
   // 半濁音に関するルール:

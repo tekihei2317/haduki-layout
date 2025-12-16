@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
-import { exampleLayout, top26Kanas } from "./layout-fixtures";
+import { layout20251213beamsearch as exampleLayout, top26Kanas, layout20251216adcale } from "./layout-fixtures";
 import { keystrokeCountForKana, strokesForKana, KanaCount, textToStrokes, keystrokesToString } from "./stroke";
 import { generateLayout, printLayout } from "./generate-random";
 import { getStrokeTime, getStrokeTimeByTrigram } from "./stroke-time";
 import { layoutToRomanTableString } from "./roman-table";
-import { searchLayout } from "./layout-search";
+import { scoreLayout, searchLayout } from "./layout-search";
+import { loadTrigramDataset } from "./dataset";
+import { Layout, validateLayout } from "./core";
 
 function runKeystrokes(datasetPath: string) {
   const lines = readFileSync(datasetPath, "utf-8").trim().split("\n");
@@ -93,12 +95,34 @@ function readStdin(): Promise<string> {
 }
 
 function generateRomanTable() {
-  console.log(layoutToRomanTableString(exampleLayout));
+  const layout = layout20251216adcale;
+  console.log(layoutToRomanTableString(layout));
+}
+
+function runScoreLayout(layout: Layout) {
+  validateLayout(layout);
+  printLayout(layout);
+  const trigrams = loadTrigramDataset();
+  const score = scoreLayout(layout, trigrams);
+
+  // 3-gramの合計1094322391エントリから、未対応のゖを含む2128+1443+1318エントリを除外した件数
+  const EXPECTED_TOTAL_COUNT = 1094317502;
+  if (score.totalCount !== EXPECTED_TOTAL_COUNT) {
+    console.log("3-gramの件数の数え上げが間違っています");
+    console.log(
+      `expected: ${EXPECTED_TOTAL_COUNT}, actual: ${score.totalCount}, diff: ${score.totalCount - EXPECTED_TOTAL_COUNT}`
+    );
+  }
+
+  console.log(JSON.stringify(score, null, 2));
 }
 
 function runSearchLayout() {
   const layout = searchLayout();
   printLayout(layout);
+  runScoreLayout(layout);
+
+  console.log(JSON.stringify(layout, null, 2));
 }
 
 async function main() {
@@ -124,6 +148,10 @@ async function main() {
     }
     case "search": {
       runSearchLayout();
+      break;
+    }
+    case "score": {
+      runScoreLayout(layout20251216adcale);
       break;
     }
     default:
