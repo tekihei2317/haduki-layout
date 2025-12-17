@@ -1,8 +1,8 @@
-import { keyPositions } from "cli/core";
+import { KeyPosition, keyPositions } from "cli/core";
 import { layout20251216adcale } from "cli/layout-fixtures";
 
 type KeyInfo = {
-  position: number;
+  position: KeyPosition;
   row: number;
   col: number;
   label: string;
@@ -69,6 +69,12 @@ function KeyboardBoard({ title, slot }: BoardProps) {
           let text = normalizeLabel(key.label);
           if (key.vowel && slot === "normalShift") {
             text = kogaki(key.vowel) ?? "";
+          }
+          if (layout[key.position].oneStroke === "は" && slot === "shift1") {
+            text = "ぴ";
+          }
+          if (layout[key.position].shift1 === "ふ" && slot === "normalShift") {
+            text = "ふ";
           }
 
           const wide = text.length >= 2;
